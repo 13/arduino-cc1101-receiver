@@ -2,6 +2,7 @@
 #include <RadioLib.h>
 #include <MemoryFree.h>
 
+#define DISABLE_CC1101
 //#define ENABLE_NODE_ADDRESS
 //#define ENABLE_ENCODING
 //#define ENABLE_SYNC_WORD
@@ -16,7 +17,9 @@
 // GDO0 pin:  2
 // RST pin:   unused
 // GDO2 pin:  3 (optional)
+#ifndef DISABLE_CC1101
 CC1101 cc = new Module(10, 2, RADIOLIB_NC);
+#endif
 
 #ifdef ENABLE_INTERRUPT
 // interrupt
@@ -48,6 +51,7 @@ void setup() {
   Serial.print("> Booting... Compiled: ");
   Serial.println(__TIMESTAMP__);
 
+#ifndef DISABLE_CC1101
   // initialize CC1101 with default settings
   Serial.print("> [CC1101] Initializing ... ");
   //int state = cc.begin();
@@ -60,6 +64,7 @@ void setup() {
     Serial.println(state);
     while (true);
   }
+#endif
 #ifdef ENABLE_ENCODING
   // set encoding 
   Serial.print("> [CC1101] Setting Encoding ... ");
@@ -139,7 +144,6 @@ void setup() {
 
 void loop() {
 #ifdef KEEP_ALIVE_MSG
-  //if (millis() - lastMillis >= 1*60*1000UL){
   if (millis() - lastMillis >= INTERVAL_1MIN){
     Serial.print("> Keep-Alive: ");
     Serial.println(countMsg);
@@ -148,8 +152,11 @@ void loop() {
     Serial.print("> Uptime: ");
     Serial.print(lastMillis/1000); 
     Serial.println(" sec");
-    Serial.print("freeMemory()=");
-    Serial.println(freeMemory());
+    Serial.print("> SRAM: ");
+    Serial.print(freeMemory());
+    Serial.print("/2048 ");
+    Serial.print((int)((float)freeMemory()/2048*100));
+    Serial.println("% free");
   }
 #endif
 #ifdef ENABLE_INTERRUPT
@@ -159,13 +166,16 @@ void loop() {
     receivedFlag = false;
 #endif
 
+#ifndef DISABLE_CC1101
     String str;
 #ifdef ENABLE_INTERRUPT
     int state = cc.readData(str);
 #else
     int state = cc.receive(str);
 #endif
+#endif
 
+#ifndef DISABLE_CC1101
     if (state == ERR_NONE) {
       str.trim();
       //if (str.length() < 64){
@@ -178,6 +188,12 @@ void loop() {
         Serial.print(",LQI:");
         Serial.print(cc.getLQI());
         Serial.println("");
+#endif
+/*#ifdef DEBUG
+        Serial.print("freeMemory()=");
+        Serial.println(freeMemory());
+#endif*/
+#ifndef DISABLE_CC1101
       /*} else {
         Serial.print(str);
         Serial.println(" success but not!");
@@ -192,6 +208,7 @@ void loop() {
         Serial.print("ERROR ");
         Serial.println(state);
     }
+#endif
 #ifdef ENABLE_INTERRUPT
     Serial.print("> [CC1101] Restarting to listen ... ");
     state = cc.startReceive();
