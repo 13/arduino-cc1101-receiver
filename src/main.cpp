@@ -2,7 +2,7 @@
 #include <RadioLib.h>
 #include <MemoryFree.h>
 
-#define DISABLE_CC1101
+//#define ENABLE_BYTE
 //#define ENABLE_NODE_ADDRESS
 //#define ENABLE_ENCODING
 //#define ENABLE_SYNC_WORD
@@ -17,9 +17,7 @@
 // GDO0 pin:  2
 // RST pin:   unused
 // GDO2 pin:  3 (optional)
-#ifndef DISABLE_CC1101
 CC1101 cc = new Module(10, 2, RADIOLIB_NC);
-#endif
 
 #ifdef ENABLE_INTERRUPT
 // interrupt
@@ -38,12 +36,14 @@ uint32_t countMsg = 1;
 #ifdef ENABLE_INTERRUPT
 void setFlag(void);
 #endif
+void printHex(uint8_t num);
+void printRAM();
 
 void setup() {
   Serial.begin(9600);
   delay(10);
 #ifdef DEBUG
-  delay(4000);
+  delay(2000);
 #endif
   // Start Boot
   Serial.println("> ");
@@ -51,7 +51,6 @@ void setup() {
   Serial.print("> Booting... Compiled: ");
   Serial.println(__TIMESTAMP__);
 
-#ifndef DISABLE_CC1101
   // initialize CC1101 with default settings
   Serial.print("> [CC1101] Initializing ... ");
   //int state = cc.begin();
@@ -64,7 +63,6 @@ void setup() {
     Serial.println(state);
     while (true);
   }
-#endif
 #ifdef ENABLE_ENCODING
   // set encoding 
   Serial.print("> [CC1101] Setting Encoding ... ");
@@ -145,18 +143,15 @@ void setup() {
 void loop() {
 #ifdef KEEP_ALIVE_MSG
   if (millis() - lastMillis >= INTERVAL_1MIN){
-    Serial.print("> Keep-Alive: ");
-    Serial.println(countMsg);
+    Serial.print("> Uptime: ");
+    Serial.print(countMsg);
+    Serial.println(" min");
     countMsg++;
     lastMillis += INTERVAL_1MIN;
     Serial.print("> Uptime: ");
     Serial.print(lastMillis/1000); 
     Serial.println(" sec");
-    Serial.print("> SRAM: ");
-    Serial.print(freeMemory());
-    Serial.print("/2048 ");
-    Serial.print((int)((float)freeMemory()/2048*100));
-    Serial.println("% free");
+    printRAM();
   }
 #endif
 #ifdef ENABLE_INTERRUPT
@@ -166,34 +161,44 @@ void loop() {
     receivedFlag = false;
 #endif
 
-#ifndef DISABLE_CC1101
+#ifdef ENABLE_BYTE
+// 63 + 63 ok but 61
+// 64 + 63 ok but 0061
+    byte byteArr[63];
+#else
     String str;
+#endif
+
 #ifdef ENABLE_INTERRUPT
     int state = cc.readData(str);
+#else
+    Serial.print("> [CC1101] Receive");
+#ifdef ENABLE_BYTE
+    int state = cc.receive(byteArr,63);
 #else
     int state = cc.receive(str);
 #endif
 #endif
+    Serial.println(" OK");
 
-#ifndef DISABLE_CC1101
     if (state == ERR_NONE) {
-      str.trim();
-      //if (str.length() < 64){
-      //if (str.charAt(0) == 'M' && str.charAt(1) == 'U' && str.charAt(2) == 'H') {
-      //if (str.charAt(0) == 'M') {
-        //Serial.println("");
+#ifdef ENABLE_BYTE
+        // i = 1 remove first byte
+        for(uint8_t i=0; i<sizeof(byteArr); i++){
+          printHex(byteArr[i]);
+        }
+        Serial.println("");
+#else
+        str.trim();
+      if (str.charAt(0) == 'M') {
+        str.trim();
         Serial.print(str);
         Serial.print(",RSSI:");
         Serial.print(cc.getRSSI());
         Serial.print(",LQI:");
-        Serial.print(cc.getLQI());
-        Serial.println("");
+        Serial.println(cc.getLQI());
+      }
 #endif
-/*#ifdef DEBUG
-        Serial.print("freeMemory()=");
-        Serial.println(freeMemory());
-#endif*/
-#ifndef DISABLE_CC1101
       /*} else {
         Serial.print(str);
         Serial.println(" success but not!");
@@ -202,13 +207,13 @@ void loop() {
 
     } else if (state == ERR_CRC_MISMATCH) {
         //Serial.println("");
-        Serial.println("CRC ERROR");
+        Serial.println("CRC ERROR ");
     } else {
         //Serial.println("");
-        Serial.print("ERROR ");
+        Serial.print("ERROR: ");
         Serial.println(state);
     }
-#endif
+    Serial.println("> x");
 #ifdef ENABLE_INTERRUPT
     Serial.print("> [CC1101] Restarting to listen ... ");
     state = cc.startReceive();
@@ -231,3 +236,18 @@ void setFlag(void) {
   receivedFlag = true;
 }
 #endif
+
+void printRAM(){
+  Serial.print("> SRAM: ");
+  Serial.print(freeMemory());
+  Serial.print("/2048 ");
+  Serial.print((int)((float)freeMemory()/2048*100));
+  Serial.println("% free");
+}
+
+void printHex(uint8_t num) {
+  char hexCar[2];
+  sprintf(hexCar, "%02X", num);
+  Serial.print(hexCar);
+  //Serial.print(" ");
+}
