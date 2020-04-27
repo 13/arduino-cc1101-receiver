@@ -2,13 +2,13 @@
 #include <RadioLib.h>
 #include <MemoryFree.h>
 
-//#define ENABLE_BYTE
+#define ENABLE_BYTE
 //#define ENABLE_NODE_ADDRESS
 //#define ENABLE_ENCODING
 //#define ENABLE_SYNC_WORD
 //#define DISABLE_SYNC_WORD_FILTERING
 //#define DISABLE_CRC
-//#define ENABLE_INTERRUPT
+#define ENABLE_INTERRUPT
 #define KEEP_ALIVE_MSG
 #define DEBUG
 
@@ -19,8 +19,8 @@
 // GDO2 pin:  3 (optional)
 CC1101 cc = new Module(10, 2, RADIOLIB_NC);
 
-#ifdef ENABLE_INTERRUPT
 // interrupt
+#ifdef ENABLE_INTERRUPT
 volatile bool receivedFlag = false;
 volatile bool enableInterrupt = true;
 #endif
@@ -33,17 +33,17 @@ uint32_t countMsg = 1;
 #endif
 
 // platformio fix
+void printHex(uint8_t num);
+void printRAM();
 #ifdef ENABLE_INTERRUPT
 void setFlag(void);
 #endif
-void printHex(uint8_t num);
-void printRAM();
 
 void setup() {
   Serial.begin(9600);
   delay(10);
 #ifdef DEBUG
-  delay(2000);
+  delay(1000);
 #endif
   // Start Boot
   Serial.println("> ");
@@ -128,6 +128,7 @@ void setup() {
   // when new packet is received
   cc.setGdo0Action(setFlag);
   // start listening for packets
+  Serial.println("> [CC1101] Interrupt mode");
   Serial.print("> [CC1101] Starting to listen ... ");
   state = cc.startReceive();
   if (state == ERR_NONE) {
@@ -160,34 +161,45 @@ void loop() {
     enableInterrupt = false;
     receivedFlag = false;
 #endif
-
-#ifdef ENABLE_BYTE
 // 63 + 63 ok but 61
 // 64 + 63 ok but 0061
-    byte byteArr[63];
+// 63 + 64 ok but head 3E
+// 62 + 64 ok but head 3E and cut tail
+// 62 + 63 ok
+// 61 best
+    Serial.println("> [CC1101] Receive ...");
+#ifdef ENABLE_BYTE
+    byte byteArr[61];
+    Serial.print("> Packet Length: ");
+    Serial.println(sizeof(byteArr)/sizeof(byteArr[0]));
+    //int state = cc.receive(byteArr,sizeof(byteArr)/sizeof(byteArr[0])+1); // +1
 #else
     String str;
-#endif
-
-#ifdef ENABLE_INTERRUPT
-    int state = cc.readData(str);
-#else
-    Serial.print("> [CC1101] Receive");
-#ifdef ENABLE_BYTE
-    int state = cc.receive(byteArr,63);
-#else
     int state = cc.receive(str);
 #endif
+#ifdef ENABLE_INTERRUPT
+    int state = cc.readData(byteArr,sizeof(byteArr)/sizeof(byteArr[0])+1); // +1
+#else
+    int state = cc.receive(byteArr,sizeof(byteArr)/sizeof(byteArr[0])+1); // +1
 #endif
-    Serial.println(" OK");
+
+    Serial.println("> [CC1101] Receive OK");
 
     if (state == ERR_NONE) {
 #ifdef ENABLE_BYTE
+      Serial.print("> Packet Length Received: ");
+      Serial.print(byteArr[0]);
+      Serial.println("");
+
+      if (byteArr[0] == (sizeof(byteArr)/sizeof(byteArr[0]))){
         // i = 1 remove first byte
-        for(uint8_t i=0; i<sizeof(byteArr); i++){
+        for(uint8_t i=1; i<sizeof(byteArr); i++){
           printHex(byteArr[i]);
         }
         Serial.println("");
+      } else {
+        Serial.println("> Packet Length Wrong");
+      }
 #else
         str.trim();
       if (str.charAt(0) == 'M') {
@@ -199,21 +211,12 @@ void loop() {
         Serial.println(cc.getLQI());
       }
 #endif
-      /*} else {
-        Serial.print(str);
-        Serial.println(" success but not!");
-      }*/
-      //}
-
     } else if (state == ERR_CRC_MISMATCH) {
-        //Serial.println("");
         Serial.println("CRC ERROR ");
     } else {
-        //Serial.println("");
         Serial.print("ERROR: ");
         Serial.println(state);
     }
-    Serial.println("> x");
 #ifdef ENABLE_INTERRUPT
     Serial.print("> [CC1101] Restarting to listen ... ");
     state = cc.startReceive();
