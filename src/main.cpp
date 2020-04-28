@@ -153,13 +153,27 @@ void loop() {
     Serial.print(lastMillis/1000); 
     Serial.println(" sec");
     printRAM();
+#ifdef ENABLE_INTERRUPT
+    Serial.print("> receivedFlag: ");
+    Serial.println(receivedFlag);
+    Serial.print("> enableInterrupt: ");
+    Serial.println(enableInterrupt);
+#endif
   }
 #endif
 #ifdef ENABLE_INTERRUPT
   if(receivedFlag) {
-    //Serial.println("[CC1101] Received transmission ... ");
     enableInterrupt = false;
     receivedFlag = false;
+    Serial.print("> [CC1101] Standby while reading ... ");
+    int state = cc.standby();
+    if (state == ERR_NONE) {
+      Serial.println("OK");
+    } else {
+      Serial.print("ERR ");
+      Serial.println(state);
+      while (true);
+    }
 #endif
 // 63 + 63 ok but 61
 // 64 + 63 ok but 0061
@@ -177,8 +191,9 @@ void loop() {
     String str;
     int state = cc.receive(str);
 #endif
+
 #ifdef ENABLE_INTERRUPT
-    int state = cc.readData(byteArr,sizeof(byteArr)/sizeof(byteArr[0])+1); // +1
+    state = cc.readData(byteArr,sizeof(byteArr)/sizeof(byteArr[0])+1); // +1
 #else
     int state = cc.receive(byteArr,sizeof(byteArr)/sizeof(byteArr[0])+1); // +1
 #endif
