@@ -5,46 +5,48 @@
 #define MARK
 #define DEBUG
 
-// CC1101 has the following connections:
-// CS pin:    10
-// GDO0 pin:  2
-// RST pin:   unused
+#define GDO0_PIN    2
+#define CC_FREQ     868.32
+
 // GDO2 pin:  3 (optional)
-CC1101 cc = new Module(10, 2, RADIOLIB_NC);
+CC1101 cc = new Module(10, GDO0_PIN, RADIOLIB_NC);
 
 // interrupt
 volatile bool receivedFlag = false;
 volatile bool enableInterrupt = true;
 
-#ifdef MARK 
+// receive
+const uint8_t byteArrSize = 61;
+byte byteArr[byteArrSize] = {0};
+
 // 1 minute mark
+#ifdef MARK 
 #define INTERVAL_1MIN (1*60*1000L)
 unsigned long lastMillis = 0L;
 uint32_t countMsg = 1;
 #endif
 
 // platformio fix
-void printHex(uint8_t num);
+void printMARK();
 void printRAM();
+void printHex(uint8_t num);
 void setFlag(void);
 
 void setup() {
   Serial.begin(9600);
   delay(10);
 #ifdef DEBUG
-  delay(1000);
+  delay(5000);
 #endif
   // Start Boot
-  Serial.println("> ");
-  Serial.println("> ");
-  Serial.print("> Booting... Compiled: ");
-  Serial.println(__TIMESTAMP__);
+  Serial.println(F("> "));
+  Serial.println(F("> "));
+  Serial.print(F("> Booting... Compiled: "));
+  Serial.println(F(__TIMESTAMP__));
 
-  // initialize CC1101 with default settings
-  Serial.print("> [CC1101] Initializing ... ");
-  //int state = cc.begin();
-  int state = cc.begin(868.32, 4.8, 48.0, 325.0, 0, 4);
-  //int state = cc.begin(868.325, 17.240, 48.0, 325.0, 0, 4);
+  // Start CC1101
+  Serial.println(F("> [CC1101] Initializing ... "));
+  int state = cc.begin(CC_FREQ, 4.8, 48.0, 325.0, 0, 4);
   if (state == ERR_NONE) {
     Serial.println("OK");
   } else {
@@ -52,52 +54,28 @@ void setup() {
     Serial.println(state);
     while (true);
   }
-  // set the function that will be called
-  // when new packet is received
   cc.setGdo0Action(setFlag);
-  // start listening for packets
-  Serial.println("> [CC1101] Interrupt mode");
-  Serial.print("> [CC1101] Starting to listen ... ");
+  // Start listening for packets
+  Serial.println(F("> [CC1101] Interrupt mode"));
+  Serial.print(F("> [CC1101] Starting to listen ... "));
   state = cc.startReceive();
   if (state == ERR_NONE) {
-    Serial.println("OK");
+    Serial.println(F("OK"));
   } else {
-    Serial.print("ERR ");
+    Serial.print(F("ERR "));
     Serial.println(state);
     while (true);
   }
 }
 
-void loop() {
+void loop(){
 #ifdef MARK
-  if (millis() - lastMillis >= INTERVAL_1MIN){
-    Serial.print("> Uptime: ");
-    Serial.print(countMsg);
-    Serial.println(" min");
-    countMsg++;
-    lastMillis += INTERVAL_1MIN;
-    //Serial.print("> Uptime: ");
-    //Serial.print(lastMillis/1000); 
-    //Serial.println(" sec");
-    printRAM();
-  }
+  printMARK();
 #endif
   if(receivedFlag) {
     enableInterrupt = false;
     receivedFlag = false;
-    /*Serial.print("> [CC1101] Standby while reading ... ");
-    int state = cc.standby();
-    if (state == ERR_NONE) {
-      Serial.println("OK");
-    } else {
-      Serial.print("ERR ");
-      Serial.println(state);
-      while (true);
-    }*/
     Serial.println("> [CC1101] Receive ...");
-    byte byteArr[61];
-    //Serial.print("> Packet Length: ");
-    //Serial.println(sizeof(byteArr)/sizeof(byteArr[0]));
     int state = cc.readData(byteArr,sizeof(byteArr)/sizeof(byteArr[0])+1); // +1
     Serial.println("> [CC1101] Receive OK");
     if (state == ERR_NONE) {
@@ -106,6 +84,7 @@ void loop() {
       Serial.println("");
       // check packet size
       if (byteArr[0] == (sizeof(byteArr)/sizeof(byteArr[0]))){
+        byteArr[sizeof(byteArr)/sizeof(byteArr[0])] = '\0';
         // i = 1 remove first byte
         for(uint8_t i=1; i<sizeof(byteArr); i++){
           printHex(byteArr[i]);
@@ -120,6 +99,7 @@ void loop() {
         Serial.print("ERROR: ");
         Serial.println(state);
     }
+
     Serial.print("> [CC1101] Restarting to listen ... ");
     state = cc.startReceive();
     if (state == ERR_NONE) {
@@ -131,22 +111,29 @@ void loop() {
     enableInterrupt = true;
   }
 }
-
 void setFlag(void) {
   if(!enableInterrupt) {
     return;
   }
   receivedFlag = true;
 }
-
+#ifdef MARK
+void printMARK(){
+  if (millis() - lastMillis >= INTERVAL_1MIN){
+    Serial.print("> Uptime: ");
+    Serial.print(countMsg);
+    Serial.println(" min");
+    countMsg++;
+    lastMillis += INTERVAL_1MIN;
+    printRAM();
+  }
+}
+#endif
 void printRAM(){
   Serial.print("> SRAM: ");
   Serial.print(freeMemory());
-  Serial.print("/2048 ");
-  Serial.print((int)((float)freeMemory()/2048*100));
-  Serial.println("% free");
+  Serial.println(" byte free");
 }
-
 void printHex(uint8_t num) {
   char hexCar[2];
   sprintf(hexCar, "%02X", num);
