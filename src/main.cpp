@@ -1,6 +1,5 @@
 #include <Arduino.h>
 #include <RadioLib.h>
-#include <MemoryFree.h>
 
 #define MARK
 #define DEBUG
@@ -19,16 +18,15 @@ volatile bool enableInterrupt = true;
 const uint8_t byteArrSize = 61;
 byte byteArr[byteArrSize] = {0};
 
-// 1 minute mark
+// one minute mark
 #ifdef MARK 
 #define INTERVAL_1MIN (1*60*1000L)
 unsigned long lastMillis = 0L;
-uint32_t countMsg = 1;
+uint32_t countMsg = 0;
 #endif
 
 // platformio fix
 void printMARK();
-void printRAM();
 void printHex(uint8_t num);
 void setFlag(void);
 
@@ -43,7 +41,6 @@ void setup() {
   Serial.println(F("> "));
   Serial.print(F("> Booting... Compiled: "));
   Serial.println(F(__TIMESTAMP__));
-
   // Start CC1101
   Serial.println(F("> [CC1101] Initializing ... "));
   int state = cc.begin(CC_FREQ, 4.8, 48.0, 325.0, 0, 4);
@@ -117,23 +114,23 @@ void setFlag(void) {
   }
   receivedFlag = true;
 }
+
 #ifdef MARK
-void printMARK(){
+void printMARK() {
+  if (countMsg == 0){
+    Serial.println("> Running... OK");
+    countMsg++;
+  }
   if (millis() - lastMillis >= INTERVAL_1MIN){
     Serial.print("> Uptime: ");
     Serial.print(countMsg);
     Serial.println(" min");
     countMsg++;
     lastMillis += INTERVAL_1MIN;
-    printRAM();
   }
 }
 #endif
-void printRAM(){
-  Serial.print("> SRAM: ");
-  Serial.print(freeMemory());
-  Serial.println(" byte free");
-}
+
 void printHex(uint8_t num) {
   char hexCar[2];
   sprintf(hexCar, "%02X", num);
