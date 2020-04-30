@@ -10,10 +10,6 @@
 // GDO2 pin:  3 (optional)
 CC1101 cc = new Module(10, GDO0_PIN, RADIOLIB_NC);
 
-// interrupt
-volatile bool receivedFlag = false;
-volatile bool enableInterrupt = true;
-
 // receive
 const uint8_t byteArrSize = 61;
 byte byteArr[byteArrSize] = {0};
@@ -51,68 +47,36 @@ void setup() {
     Serial.println(state);
     while (true);
   }
-  cc.setGdo0Action(setFlag);
-  // Start listening for packets
-  Serial.println(F("> [CC1101] Interrupt mode"));
-  Serial.print(F("> [CC1101] Starting to listen ... "));
-  state = cc.startReceive();
-  if (state == ERR_NONE) {
-    Serial.println(F("OK"));
-  } else {
-    Serial.print(F("ERR "));
-    Serial.println(state);
-    while (true);
-  }
 }
 
 void loop(){
 #ifdef MARK
   printMARK();
 #endif
-  if(receivedFlag) {
-    enableInterrupt = false;
-    receivedFlag = false;
-    Serial.println("> [CC1101] Receive ...");
-    int state = cc.readData(byteArr,sizeof(byteArr)/sizeof(byteArr[0])+1); // +1
-    Serial.println("> [CC1101] Receive OK");
-    if (state == ERR_NONE) {
-      Serial.print("> Packet Length Received: ");
-      Serial.print(byteArr[0]);
-      Serial.println("");
-      // check packet size
-      if (byteArr[0] == (sizeof(byteArr)/sizeof(byteArr[0]))){
-        byteArr[sizeof(byteArr)/sizeof(byteArr[0])] = '\0';
-        // i = 1 remove first byte
-        for(uint8_t i=1; i<sizeof(byteArr); i++){
-          printHex(byteArr[i]);
-        }
-        Serial.println("");
-      } else {
-        Serial.println("> Packet Length Wrong");
+  Serial.println("> [CC1101] Receive ...");
+  int state = cc.receive(byteArr,sizeof(byteArr)/sizeof(byteArr[0])+1); // +1
+  Serial.println("> [CC1101] Receive OK");
+  if (state == ERR_NONE) {
+    Serial.print("> Packet Length Received: ");
+    Serial.print(byteArr[0]);
+    Serial.println("");
+    // check packet size
+    if (byteArr[0] == (sizeof(byteArr)/sizeof(byteArr[0]))){
+      byteArr[sizeof(byteArr)/sizeof(byteArr[0])] = '\0';
+      // i = 1 remove first byte
+      for(uint8_t i=1; i<sizeof(byteArr); i++){
+        printHex(byteArr[i]);
       }
-    } else if (state == ERR_CRC_MISMATCH) {
-        Serial.println("CRC ERROR ");
+      Serial.println("");
     } else {
-        Serial.print("ERROR: ");
-        Serial.println(state);
+      Serial.println("> Packet Length Wrong");
     }
-
-    Serial.print("> [CC1101] Restarting to listen ... ");
-    state = cc.startReceive();
-    if (state == ERR_NONE) {
-      Serial.println("OK");
-    } else {
-      Serial.print("ERR ");
+  } else if (state == ERR_CRC_MISMATCH) {
+      Serial.println("CRC ERROR ");
+  } else {
+      Serial.print("ERROR: ");
       Serial.println(state);
-    }
-    enableInterrupt = true;
   }
-}
-void setFlag(void) {
-  if(!enableInterrupt) {
-    return;
-  }
-  receivedFlag = true;
 }
 
 #ifdef MARK
