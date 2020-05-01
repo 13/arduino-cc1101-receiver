@@ -38,12 +38,12 @@ void setup() {
   Serial.print(F("> Booting... Compiled: "));
   Serial.println(F(__TIMESTAMP__));
   // Start CC1101
-  Serial.println(F("> [CC1101] Initializing ... "));
+  Serial.print(F("> [CC1101] Initializing... "));
   int state = cc.begin(CC_FREQ, 4.8, 48.0, 325.0, 0, 4);
   if (state == ERR_NONE) {
-    Serial.println("OK");
+    Serial.println(F("OK"));
   } else {
-    Serial.print("ERR ");
+    Serial.print(F("ERR "));
     Serial.println(state);
     while (true);
   }
@@ -53,28 +53,31 @@ void loop(){
 #ifdef MARK
   printMARK();
 #endif
-  Serial.println("> [CC1101] Receive ...");
+  Serial.print(F("> [CC1101] Receive... "));
   int state = cc.receive(byteArr,sizeof(byteArr)/sizeof(byteArr[0])+1); // +1
-  Serial.println("> [CC1101] Receive OK");
+  //Serial.println(F("> [CC1101] Receive OK"));
   if (state == ERR_NONE) {
-    Serial.print("> Packet Length Received: ");
+    Serial.println(F("OK"));
+    /*Serial.print(F("> Packet Length Received: "));
     Serial.print(byteArr[0]);
-    Serial.println("");
+    Serial.println();*/
     // check packet size
     if (byteArr[0] == (sizeof(byteArr)/sizeof(byteArr[0]))){
       byteArr[sizeof(byteArr)/sizeof(byteArr[0])] = '\0';
-      // i = 1 remove first byte
+      // i = 1 remove length byte
       for(uint8_t i=1; i<sizeof(byteArr); i++){
         printHex(byteArr[i]);
       }
-      Serial.println("");
+      Serial.println();
     } else {
-      Serial.println("> Packet Length Wrong");
+      Serial.println(F("> Packet Length Mismatch"));
     }
   } else if (state == ERR_CRC_MISMATCH) {
-      Serial.println("CRC ERROR ");
+      Serial.println(F("CRC ERROR"));
+  } else if (state == ERR_RX_TIMEOUT) {
+      Serial.println(F("TIMEOUT ERROR"));
   } else {
-      Serial.print("ERROR: ");
+      Serial.print(F("ERROR: "));
       Serial.println(state);
   }
 }
@@ -82,13 +85,13 @@ void loop(){
 #ifdef MARK
 void printMARK() {
   if (countMsg == 0){
-    Serial.println("> Running... OK");
+    Serial.println(F("> Running... OK"));
     countMsg++;
   }
   if (millis() - lastMillis >= INTERVAL_1MIN){
-    Serial.print("> Uptime: ");
+    Serial.print(F("> Uptime: "));
     Serial.print(countMsg);
-    Serial.println(" min");
+    Serial.println(F(" min"));
     countMsg++;
     lastMillis += INTERVAL_1MIN;
   }
