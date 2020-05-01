@@ -65,10 +65,19 @@ void loop(){
     if (byteArr[0] == (sizeof(byteArr)/sizeof(byteArr[0]))){
       byteArr[sizeof(byteArr)/sizeof(byteArr[0])] = '\0';
       // i = 1 remove length byte
-      for(uint8_t i=1; i<sizeof(byteArr); i++){
+      // print hex
+      /*for(uint8_t i=1; i<sizeof(byteArr); i++){
         printHex(byteArr[i]);
       }
-      Serial.println();
+      Serial.println();*/
+      // print char
+      for(uint8_t i=1; i<sizeof(byteArr); i++){
+        Serial.print((char)byteArr[i]);
+      }
+      Serial.print(F(",RSSI:"));
+      Serial.print(cc.getRSSI());
+      Serial.print(F(",LQI:"));
+      Serial.println(cc.getLQI());
     } else {
       Serial.println(F("> Packet Length Mismatch"));
     }
