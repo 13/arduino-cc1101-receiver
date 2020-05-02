@@ -57,13 +57,14 @@ void loop(){
   int state = cc.receive(byteArr,sizeof(byteArr)/sizeof(byteArr[0])+1); // +1
   //Serial.println(F("> [CC1101] Receive OK"));
   if (state == ERR_NONE) {
-    Serial.println(F("OK"));
+    //Serial.println(F("OK"));
     /*Serial.print(F("> Packet Length Received: "));
     Serial.print(byteArr[0]);
     Serial.println();*/
     // check packet size
     if (byteArr[0] == (sizeof(byteArr)/sizeof(byteArr[0]))){
       byteArr[sizeof(byteArr)/sizeof(byteArr[0])] = '\0';
+      Serial.println(F("OK"));
       // i = 1 remove length byte
       // print hex
       /*for(uint8_t i=1; i<sizeof(byteArr); i++){
@@ -79,7 +80,7 @@ void loop(){
       Serial.print(F(",LQI:"));
       Serial.println(cc.getLQI());
     } else {
-      Serial.println(F("> Packet Length Mismatch"));
+      Serial.println(F("LENGTH MISMATCH"));
     }
   } else if (state == ERR_CRC_MISMATCH) {
       Serial.println(F("CRC ERROR"));
