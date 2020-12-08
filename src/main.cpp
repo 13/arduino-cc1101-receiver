@@ -4,11 +4,13 @@
 #define MARK
 #define DEBUG
 
-#define GDO0_PIN    2
 #define CC_FREQ     868.32
+#define CC_POWER    10
 
-// GDO2 pin:  3 (optional)
-CC1101 cc = new Module(10, GDO0_PIN, RADIOLIB_NC);
+// CC1101
+// CS pin:    10
+// GDO0 pin:  2
+CC1101 cc = new Module(10, 2, RADIOLIB_NC);
 
 // receive
 const uint8_t byteArrSize = 61;
@@ -39,7 +41,8 @@ void setup() {
   Serial.println(F(__TIMESTAMP__));
   // Start CC1101
   Serial.print(F("> [CC1101] Initializing... "));
-  int state = cc.begin(CC_FREQ, 4.8, 48.0, 325.0, 0, 4);
+  //int state = cc.begin(CC_FREQ, 4.8, 48.0, 325.0, 0, 4);
+  int state = cc.begin(CC_FREQ, 48.0, 48.0, 135.0, CC_POWER, 16);
   if (state == ERR_NONE) {
     Serial.println(F("OK"));
   } else {
