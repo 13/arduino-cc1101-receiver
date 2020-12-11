@@ -83,10 +83,11 @@ void loop(){
       Serial.print(cc.getRSSI());
       Serial.print(F(",LQI:"));
       Serial.println(cc.getLQI());
+    } else {
+      #ifdef DEBUG
+      Serial.println(F(""));
+      #endif
     }
-    #ifdef DEBUG
-    Serial.println(F(""));
-    #endif
   } else if (state == ERR_CRC_MISMATCH) {
       Serial.println(F("ERR CRC MISMATCH"));
   } else if (state == ERR_RX_TIMEOUT) {
