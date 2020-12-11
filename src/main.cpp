@@ -16,11 +16,11 @@ CC1101 cc = new Module(10, 2, RADIOLIB_NC);
 const uint8_t byteArrSize = 61;
 byte byteArr[byteArrSize] = {0};
 
-// one minute mark
-#ifdef MARK 
-#define INTERVAL_1MIN (1*60*1000L)
-unsigned long lastMillis = 0L;
-uint32_t countMsg = 0;
+#ifdef MARK
+  // one minute mark
+  #define INTERVAL_1MIN (1*60*1000L)
+  unsigned long lastMillis = 0L;
+  uint32_t countMsg = 0;
 #endif
 
 // platformio fix
@@ -41,7 +41,6 @@ void setup() {
   Serial.println(F(__TIMESTAMP__));
   // Start CC1101
   Serial.print(F("> [CC1101] Initializing... "));
-  //int state = cc.begin(CC_FREQ, 4.8, 48.0, 325.0, 0, 4);
   int state = cc.begin(CC_FREQ, 48.0, 48.0, 135.0, CC_POWER, 16);
   if (state == ERR_NONE) {
     Serial.println(F("OK"));
@@ -58,22 +57,12 @@ void loop(){
 #endif
   Serial.print(F("> [CC1101] Receive... "));
   int state = cc.receive(byteArr,sizeof(byteArr)/sizeof(byteArr[0])+1); // +1
-  //Serial.println(F("> [CC1101] Receive OK"));
   if (state == ERR_NONE) {
-    //Serial.println(F("OK"));
-    /*Serial.print(F("> Packet Length Received: "));
-    Serial.print(byteArr[0]);
-    Serial.println();*/
     // check packet size
     if (byteArr[0] == (sizeof(byteArr)/sizeof(byteArr[0]))){
       byteArr[sizeof(byteArr)/sizeof(byteArr[0])] = '\0';
       Serial.println(F("OK"));
       // i = 1 remove length byte
-      // print hex
-      /*for(uint8_t i=1; i<sizeof(byteArr); i++){
-        printHex(byteArr[i]);
-      }
-      Serial.println();*/
       // print char
       for(uint8_t i=1; i<sizeof(byteArr); i++){
         Serial.print((char)byteArr[i]);
