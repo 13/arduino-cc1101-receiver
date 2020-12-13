@@ -2,7 +2,8 @@
 #include <RadioLib.h>
 
 #define MARK
-#define DEBUG
+#define VERBOSE
+//#define DEBUG
 
 #define CC_FREQ     868.32
 #define CC_POWER    10
@@ -31,7 +32,7 @@ void setFlag(void);
 void setup() {
   Serial.begin(9600);
   delay(10);
-#ifdef DEBUG
+#ifdef VERBOSE
   delay(5000);
 #endif
   // Start Boot
@@ -62,31 +63,18 @@ void loop(){
     boolean equalPacketSize = (byteArr[0] == (sizeof(byteArr)/sizeof(byteArr[0]))) ? true : false;
     if (equalPacketSize){
       Serial.println(F("OK"));
-    } else {
-      Serial.print(F("ERR LENGTH MISMATCH "));
-      #ifdef DEBUG
-      Serial.print(F(" b:"));
-      Serial.print(byteArr[0]);
-      Serial.print(F(" S:"));
-      Serial.print(sizeof(byteArr)/sizeof(byteArr[0])));
-      Serial.print(F(" "));
-      #endif
-    }
-    byteArr[sizeof(byteArr)/sizeof(byteArr[0])] = '\0';
-    // i = 1 remove length byte
-    // print char
-    for(uint8_t i=1; i<sizeof(byteArr); i++){
-      Serial.print((char)byteArr[i]);
-    }
-    if (equalPacketSize){
+      byteArr[sizeof(byteArr)/sizeof(byteArr[0])] = '\0';
+      // i = 1 remove length byte
+      // print char
+      for(uint8_t i=1; i<sizeof(byteArr); i++){
+        Serial.print((char)byteArr[i]);
+      }
       Serial.print(F(",RSSI:"));
       Serial.print(cc.getRSSI());
       Serial.print(F(",LQI:"));
       Serial.println(cc.getLQI());
     } else {
-      #ifdef DEBUG
-      Serial.println(F(""));
-      #endif
+      Serial.println(F("ERR LENGTH MISMATCH"));
     }
   } else if (state == ERR_CRC_MISMATCH) {
       Serial.println(F("ERR CRC MISMATCH"));
