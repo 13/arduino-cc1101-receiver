@@ -40,8 +40,6 @@ Moreover, it filters ERR_LENGTH_MISMATCH, ERR_CRC_MISMATCH AND ERR_RX_TIMEOUT.
 
 ```sh
 git clone https://github.com/13/arduino-cc1101-receiver.git
-
-npm install
 ```
 
 ## Usage
