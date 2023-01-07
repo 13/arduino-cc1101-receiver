@@ -1,24 +1,25 @@
 #include <Arduino.h>
 #include <RadioLib.h>
 
-#define MARK
-#define VERBOSE
+// #define VERBOSE
 // #define DEBUG
 
 #define CC_FREQ 868.32
 #define CC_POWER 10
+#define GD0 2
 
 // CC1101
 // CS pin:    10
 // GDO0 pin:  2
-CC1101 cc = new Module(10, 2, RADIOLIB_NC);
+CC1101 cc = new Module(10, GD0, RADIOLIB_NC);
 
 // receive
 const uint8_t byteArrSize = 61;
 byte byteArr[byteArrSize] = {0};
 
-#ifdef MARK
+#ifdef VERBOSE
 // one minute mark
+#define MARK
 #define INTERVAL_1MIN (1 * 60 * 1000L)
 unsigned long lastMillis = 0L;
 uint32_t countMsg = 0;
@@ -40,15 +41,13 @@ void setup()
   Serial.print(F("> Booting... Compiled: "));
   Serial.println(F(__TIMESTAMP__));
   Serial.print(("> Mode: "));
-#ifdef MARK
-  Serial.println(F("MARK "));
-#endif
 #ifdef VERBOSE
-  Serial.println(F("VERBOSE "));
-#endif
+  Serial.print(F("VERBOSE "));
+#endif  
 #ifdef DEBUG
-  Serial.println(F("DEBUG"));
+  Serial.print(F("DEBUG"));
 #endif
+  Serial.println();
   // Start CC1101
   Serial.print(F("> [CC1101] Initializing... "));
   int state = cc.begin(CC_FREQ, 48.0, 48.0, 135.0, CC_POWER, 16);
@@ -60,7 +59,8 @@ void setup()
   {
     Serial.print(F("ERR "));
     Serial.println(state);
-    // while (true);
+    while (true)
+      ;
   }
 }
 
@@ -75,14 +75,13 @@ void loop()
   int state = cc.receive(byteArr, sizeof(byteArr) / sizeof(byteArr[0]) + 1); // +1
   if (state == ERR_NONE)
   {
-#ifndef DEBUG
-    Serial.print(F("> [CC1101] Receive... "));
-#endif
     // check packet size
     boolean equalPacketSize = (byteArr[0] == (sizeof(byteArr) / sizeof(byteArr[0]))) ? true : false;
     if (equalPacketSize)
     {
+#ifdef DEBUG
       Serial.println(F("OK"));
+#endif
       byteArr[sizeof(byteArr) / sizeof(byteArr[0])] = '\0';
       // i = 1 remove length byte
       // print char
