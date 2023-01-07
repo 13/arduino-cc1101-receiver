@@ -54,7 +54,7 @@ git clone https://github.com/13/arduino-cc1101-receiver.git
 
 ## Release History
 
-* 1.0.0
+* 1.1.0
     * Initial release
 
 ## Contact
