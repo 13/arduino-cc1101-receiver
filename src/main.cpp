@@ -98,6 +98,13 @@ void loop()
     else
     {
       Serial.println(F("ERR LENGTH MISMATCH"));
+
+      byteArr[sizeof(byteArr) / sizeof(byteArr[0])] = '\0';
+      for (uint8_t i = 1; i < sizeof(byteArr); i++)
+      {
+        Serial.print((char)byteArr[i]);
+      }
+      Serial.println();
     }
 #endif
   }
