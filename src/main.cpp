@@ -43,7 +43,7 @@ void setup()
   Serial.print(("> Mode: "));
 #ifdef VERBOSE
   Serial.print(F("VERBOSE "));
-#endif  
+#endif
 #ifdef DEBUG
   Serial.print(F("DEBUG"));
 #endif
@@ -75,38 +75,20 @@ void loop()
   int state = cc.receive(byteArr, sizeof(byteArr) / sizeof(byteArr[0]) + 1); // +1
   if (state == ERR_NONE)
   {
-    // check packet size
-    boolean equalPacketSize = (byteArr[0] == (sizeof(byteArr) / sizeof(byteArr[0]))) ? true : false;
-    if (equalPacketSize)
-    {
 #ifdef DEBUG
-      Serial.println(F("OK"));
+    Serial.println(F("OK"));
 #endif
-      byteArr[sizeof(byteArr) / sizeof(byteArr[0])] = '\0';
-      // i = 1 remove length byte
-      // print char
-      for (uint8_t i = 1; i < sizeof(byteArr); i++)
-      {
-        Serial.print((char)byteArr[i]);
-      }
-      Serial.print(F(",RSSI:"));
-      Serial.print(cc.getRSSI());
-      Serial.print(F(",LQI:"));
-      Serial.println(cc.getLQI());
-    }
-#ifdef DEBUG
-    else
+    byteArr[sizeof(byteArr) / sizeof(byteArr[0])] = '\0';
+    // i = 1 remove length byte
+    // print char
+    for (uint8_t i = 1; i < sizeof(byteArr); i++)
     {
-      Serial.println(F("ERR LENGTH MISMATCH"));
-
-      byteArr[sizeof(byteArr) / sizeof(byteArr[0])] = '\0';
-      for (uint8_t i = 1; i < sizeof(byteArr); i++)
-      {
-        Serial.print((char)byteArr[i]);
-      }
-      Serial.println();
+      Serial.print((char)byteArr[i]);
     }
-#endif
+    Serial.print(F(",RSSI:"));
+    Serial.print(cc.getRSSI());
+    Serial.print(F(",LQI:"));
+    Serial.println(cc.getLQI());
   }
 #ifdef DEBUG
   else if (state == ERR_CRC_MISMATCH)
