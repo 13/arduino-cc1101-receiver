@@ -100,7 +100,11 @@ void loop()
       // print char
       if ((char)byteArr[1] == 'Z')
       {
+#ifndef CHECKSIZE_ALT
         for (uint8_t i = 1; i < sizeof(byteArr); i++)
+#elif
+        for (uint8_t i = 1; i < byteArr[0]; i++)
+#endif
         {
           Serial.print((char)byteArr[i]);
         }
@@ -114,7 +118,7 @@ void loop()
       {
         Serial.print(F("> [CC1101] Receive... "));
         Serial.println(F("ERR Z"));
-        for (uint8_t i = 1; i < sizeof(byteArr); i++)
+        for (uint8_t i = 0; i < sizeof(byteArr); i++)
         {
           Serial.print((char)byteArr[i]);
         }
