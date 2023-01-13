@@ -3,6 +3,7 @@
 
 // #define VERBOSE
 // #define DEBUG
+// #define CHECKSIZE_ALT
 
 #define CC_FREQ 868.32
 #define CC_POWER 10
@@ -75,8 +76,17 @@ void loop()
   int state = cc.receive(byteArr, sizeof(byteArr) / sizeof(byteArr[0]) + 1); // +1
   if (state == ERR_NONE)
   {
+#ifndef CHECKSIZE_ALT
     // check packet size
     boolean equalPacketSize = (byteArr[0] == (sizeof(byteArr) / sizeof(byteArr[0]))) ? true : false;
+#elif
+    boolean equalPacketSize = (byteArr[0] == byteArr[3]) ? true : false;
+#endif
+#ifdef DEBUG
+    Serial.print((char)byteArr[0]);
+    Serial.print(" - ");
+    Serial.println((char)byteArr[3]);
+#endif
     if (equalPacketSize)
     {
 #ifdef DEBUG
