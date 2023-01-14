@@ -3,7 +3,6 @@
 
 // #define VERBOSE
 // #define DEBUG
-// #define CHECKSIZE_ALT
 
 #define CC_FREQ 868.32
 #define CC_POWER 10
@@ -18,7 +17,7 @@ CC1101 cc = new Module(10, GD0, RADIOLIB_NC);
 const uint8_t byteArrSize = 61;
 byte byteArr[byteArrSize] = {0};
 
-#ifdef VERBOSE
+#ifdef DEBUG
 // one minute mark
 #define MARK
 #define INTERVAL_1MIN (1 * 60 * 1000L)
@@ -70,43 +69,35 @@ void loop()
 #ifdef MARK
   printMARK();
 #endif
-#ifdef DEBUG
+#ifdef VERBOSE
   Serial.print(F("> [CC1101] Receive... "));
 #endif
   int state = cc.receive(byteArr, sizeof(byteArr) / sizeof(byteArr[0]) + 1); // +1
   if (state == ERR_NONE)
   {
-#ifndef CHECKSIZE_ALT
+#ifdef VERBOSE
+    Serial.println(F("OK"));
+#endif
+#ifdef DEBUG
+    Serial.print(F("> Packetsize: "));
+    Serial.println(byteArr[0]);
+#endif
     // check packet size
     boolean equalPacketSize = (byteArr[0] == (sizeof(byteArr) / sizeof(byteArr[0]))) ? true : false;
-#elif
-    boolean equalPacketSize = (byteArr[0] == byteArr[3]) ? true : false;
-#endif
-#ifdef DEBUG
-    Serial.print((char)byteArr[0]);
-    Serial.print(" - ");
-    Serial.println((char)byteArr[3]);
-#endif
     if (equalPacketSize)
     {
-#ifdef DEBUG
-      Serial.println(F("OK"));
-      Serial.print(F("> [CC1101] Received packet size: "));
-      Serial.println(byteArr[0]);
-#endif
       // add
       byteArr[sizeof(byteArr) / sizeof(byteArr[0])] = '\0';
       // i = 1 remove length byte
       // print char
       if ((char)byteArr[1] == 'Z')
       {
-#ifndef CHECKSIZE_ALT
         for (uint8_t i = 1; i < sizeof(byteArr); i++)
-#elif
-        for (uint8_t i = 1; i < byteArr[0]; i++)
-#endif
         {
-          Serial.print((char)byteArr[i]);
+          if (byteArr[i] != 32)
+          {
+            Serial.print((char)byteArr[i]);
+          }
         }
         Serial.print(F(",RSSI:"));
         Serial.print(cc.getRSSI());
@@ -130,6 +121,11 @@ void loop()
     else
     {
       Serial.println(F("ERR LENGTH MISMATCH"));
+      for (uint8_t i = 1; i < byteArr[0]; i++)
+      {
+        Serial.print((char)byteArr[i]);
+      }
+      Serial.println();
     }
 #endif
   }
