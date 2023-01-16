@@ -50,15 +50,15 @@ void setup()
   Serial.println();
   // Start CC1101
   Serial.print(F("> [CC1101] Initializing... "));
-  int state = cc.begin(CC_FREQ, 48.0, 48.0, 135.0, CC_POWER, 16);
-  if (state == ERR_NONE)
+  int cc_state = cc.begin(CC_FREQ, 48.0, 48.0, 135.0, CC_POWER, 16);
+  if (cc_state == ERR_NONE)
   {
     Serial.println(F("OK"));
   }
   else
   {
     Serial.print(F("ERR "));
-    Serial.println(state);
+    Serial.println(cc_state);
     while (true)
       ;
   }
@@ -72,8 +72,8 @@ void loop()
 #ifdef VERBOSE
   Serial.print(F("> [CC1101] Receive... "));
 #endif
-  int state = cc.receive(byteArr, sizeof(byteArr) / sizeof(byteArr[0]) + 1); // +1
-  if (state == ERR_NONE)
+  int cc_rx_state = cc.receive(byteArr, sizeof(byteArr) / sizeof(byteArr[0]) + 1); // +1
+  if (cc_rx_state == ERR_NONE)
   {
 #ifdef VERBOSE
     Serial.println(F("OK"));
@@ -130,18 +130,18 @@ void loop()
 #endif
   }
 #ifdef DEBUG
-  else if (state == ERR_CRC_MISMATCH)
+  else if (cc_rx_state == ERR_CRC_MISMATCH)
   {
     Serial.println(F("ERR CRC MISMATCH"));
   }
-  else if (state == ERR_RX_TIMEOUT)
+  else if (cc_rx_state == ERR_RX_TIMEOUT)
   {
     Serial.println(F("ERR RX TIMEOUT"));
   }
   else
   {
     Serial.print(F("ERR "));
-    Serial.println(state);
+    Serial.println(cc_rx_state);
   }
 #endif
 }
