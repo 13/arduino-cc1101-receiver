@@ -19,6 +19,7 @@ An Arduino CC1101 receiver
 ## About
 
 The arduino-cc1101-receiver receives a 61 characters string and adds RSSI/LQI.
+
 Moreover, it filters ERR_LENGTH_MISMATCH, ERR_CRC_MISMATCH AND ERR_RX_TIMEOUT.
 
 ### Built With
