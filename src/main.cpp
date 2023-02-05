@@ -1,12 +1,8 @@
 #include <Arduino.h>
 #include <RadioLib.h>
+#include "credentials.h"
 
-// #define VERBOSE
-// #define DEBUG
-
-#define CC_FREQ 868.32
-#define CC_POWER 10
-#define GD0 2
+// Edit credentials.h
 
 // CC1101
 // CS pin:    10
@@ -75,17 +71,16 @@ void loop()
   int cc_rx_state = cc.receive(byteArr, sizeof(byteArr) / sizeof(byteArr[0]) + 1); // +1
   if (cc_rx_state == ERR_NONE)
   {
-#ifdef VERBOSE
-    Serial.println(F("OK"));
-#endif
 #ifdef DEBUG
-    Serial.print(F("> Packetsize: "));
-    Serial.println(byteArr[0]);
+    Serial.print(F("ERR_NONE "));
 #endif
     // check packet size
     boolean equalPacketSize = (byteArr[0] == (sizeof(byteArr) / sizeof(byteArr[0]))) ? true : false;
     if (equalPacketSize)
     {
+#ifdef VERBOSE
+      Serial.println(F("OK"));
+#endif
       // add
       byteArr[sizeof(byteArr) / sizeof(byteArr[0])] = '\0';
       // i = 1 remove length byte
@@ -120,7 +115,8 @@ void loop()
 #ifdef DEBUG
     else
     {
-      Serial.println(F("ERR LENGTH MISMATCH"));
+      Serial.print(F("ERR LENGTH: "));
+      Serial.println(byteArr[0]);
       for (uint8_t i = 1; i < byteArr[0]; i++)
       {
         Serial.print((char)byteArr[i]);
