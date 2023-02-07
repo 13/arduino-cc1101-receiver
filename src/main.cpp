@@ -67,49 +67,62 @@ void loop()
 #ifdef MARK
   printMARK();
 #endif
-#ifdef VERBOSE
-  Serial.print(F("> [CC1101] Receive... "));
-#endif
-  // int cc_rx_state = cc.receive(byteArr, sizeof(byteArr) / sizeof(byteArr[0]) + 1); // +1
-  int cc_rx_state = ELECHOUSE_cc1101.CheckReceiveFlag();
-  if (cc_rx_state && ELECHOUSE_cc1101.CheckCRC())
+
+  if (ELECHOUSE_cc1101.CheckReceiveFlag())
   {
-#ifdef DEBUG
-    Serial.print(F("ERR_NONE "));
-#endif
-    int byteArrLen = ELECHOUSE_cc1101.ReceiveData(byteArr);
-    // check packet size
-    boolean equalPacketSize = (byteArr[0] == (sizeof(byteArr) / sizeof(byteArr[0]))) ? true : false;
-    if (equalPacketSize)
-    {
 #ifdef VERBOSE
-      Serial.println(F("OK"));
+    Serial.print(F("> [CC1101] Receive... "));
 #endif
-      // add
-      byteArr[sizeof(byteArr) / sizeof(byteArr[0])] = '\0';
-      byteArr[byteArrLen] = '\0';
-      // i = 1 remove length byte
-      // print char
-      if ((char)byteArr[1] == 'Z')
+    if (ELECHOUSE_cc1101.CheckCRC())
+    {
+#ifdef DEBUG
+        Serial.print(F("CRC "));
+#endif
+      int byteArrLen = ELECHOUSE_cc1101.ReceiveData(byteArr);
+      // check packet size
+      boolean equalPacketSize = (byteArr[0] == (sizeof(byteArr) / sizeof(byteArr[0]))) ? true : false;
+      if (equalPacketSize)
       {
-        for (uint8_t i = 1; i < sizeof(byteArr); i++)
+#ifdef VERBOSE
+        Serial.println(F("OK"));
+#endif
+        // add
+        // byteArr[sizeof(byteArr) / sizeof(byteArr[0])] = '\0';
+        byteArr[byteArrLen] = '\0';
+        // i = 1 remove length byte
+        // print char
+        if ((char)byteArr[1] == 'Z')
         {
-          if (byteArr[i] != 32)
+          for (uint8_t i = 1; i < sizeof(byteArr); i++)
+          {
+            if (byteArr[i] != 32)
+            {
+              Serial.print((char)byteArr[i]);
+            }
+          }
+          Serial.print(F(",RSSI:"));
+          Serial.print(ELECHOUSE_cc1101.getRssi());
+          Serial.print(F(",LQI:"));
+          Serial.println(ELECHOUSE_cc1101.getLqi());
+        }
+#ifdef DEBUG
+        else
+        {
+          Serial.println(F("ERR Z"));
+          for (uint8_t i = 0; i < sizeof(byteArr); i++)
           {
             Serial.print((char)byteArr[i]);
           }
+          Serial.println();
         }
-        Serial.print(F(",RSSI:"));
-        Serial.print(ELECHOUSE_cc1101.getRssi());
-        Serial.print(F(",LQI:"));
-        Serial.println(ELECHOUSE_cc1101.getLqi());
+#endif
       }
 #ifdef DEBUG
       else
       {
-        Serial.print(F("> [CC1101] Receive... "));
-        Serial.println(F("ERR Z"));
-        for (uint8_t i = 0; i < sizeof(byteArr); i++)
+        Serial.print(F("ERR LENGTH: "));
+        Serial.println(byteArr[0]);
+        for (uint8_t i = 1; i < byteArr[0]; i++)
         {
           Serial.print((char)byteArr[i]);
         }
@@ -120,23 +133,10 @@ void loop()
 #ifdef DEBUG
     else
     {
-      Serial.print(F("ERR LENGTH: "));
-      Serial.println(byteArr[0]);
-      for (uint8_t i = 1; i < byteArr[0]; i++)
-      {
-        Serial.print((char)byteArr[i]);
-      }
-      Serial.println();
+      Serial.println(F("ERR CRC"));
     }
 #endif
   }
-#ifdef DEBUG
-  else
-  {
-    Serial.print(F("ERR "));
-    Serial.println(cc_rx_state);
-  }
-#endif
 }
 
 #ifdef MARK
@@ -144,12 +144,12 @@ void printMARK()
 {
   if (countMsg == 0)
   {
-    Serial.println(F("> Running... OK"));
+    Serial.println(F("> [MARK] Starting... OK"));
     countMsg++;
   }
   if (millis() - lastMillis >= INTERVAL_1MIN)
   {
-    Serial.print(F("> Uptime: "));
+    Serial.print(F("> [MARK] Uptime: "));
     Serial.print(countMsg);
     Serial.println(F(" min"));
     countMsg++;
