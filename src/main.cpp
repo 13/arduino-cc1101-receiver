@@ -89,13 +89,14 @@ void loop()
       {
         for (uint8_t i = 1; i < sizeof(byteArr); i++)
         {
-          if (byteArr[i] != 32)
+          // Filter space and full stop
+          if (byteArr[i] != 32 && byteArr[i] != 46)
           {
             Serial.print((char)byteArr[i]);
           }
         }
         Serial.print(F(",RSSI:"));
-        Serial.print(cc.getRSSI());
+        Serial.print((int)cc.getRSSI());
         Serial.print(F(",LQI:"));
         Serial.println(cc.getLQI());
       }
