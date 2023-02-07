@@ -1,13 +1,8 @@
 #include <Arduino.h>
-#include <RadioLib.h>
+#include <ELECHOUSE_CC1101_SRC_DRV.h>
 #include "credentials.h"
 
 // Edit credentials.h
-
-// CC1101
-// CS pin:    10
-// GDO0 pin:  2
-CC1101 cc = new Module(10, GD0, RADIOLIB_NC);
 
 // receive
 const uint8_t byteArrSize = 61;
@@ -46,10 +41,17 @@ void setup()
   Serial.println();
   // Start CC1101
   Serial.print(F("> [CC1101] Initializing... "));
-  int cc_state = cc.begin(CC_FREQ, 48.0, 48.0, 135.0, CC_POWER, 16);
-  if (cc_state == ERR_NONE)
+  int cc_state = ELECHOUSE_cc1101.getCC1101();
+  if (cc_state)
   {
     Serial.println(F("OK"));
+    ELECHOUSE_cc1101.Init();           // must be set to initialize the cc1101!
+    ELECHOUSE_cc1101.setGDO0(GD0);     // set lib internal gdo pin (gdo0). Gdo2 not use for this example.
+    ELECHOUSE_cc1101.setCCMode(1);     // set config for internal transmission mode.
+    ELECHOUSE_cc1101.setModulation(0); // set modulation mode. 0 = 2-FSK, 1 = GFSK, 2 = ASK/OOK, 3 = 4-FSK, 4 = MSK.
+    ELECHOUSE_cc1101.setMHZ(CC_FREQ);  // Here you can set your basic frequency. The lib calculates the frequency automatically (default = 433.92).The cc1101 can: 300-348 MHZ, 387-464MHZ and 779-928MHZ. Read More info from datasheet.
+    ELECHOUSE_cc1101.setSyncMode(2);   // Combined sync-word qualifier mode. 0 = No preamble/sync. 1 = 16 sync word bits detected. 2 = 16/16 sync word bits detected. 3 = 30/32 sync word bits detected. 4 = No preamble/sync, carrier-sense above threshold. 5 = 15/16 + carrier-sense above threshold. 6 = 16/16 + carrier-sense above threshold. 7 = 30/32 + carrier-sense above threshold.
+    ELECHOUSE_cc1101.setCrc(1);        // 1 = CRC calculation in TX and CRC check in RX enabled. 0 = CRC disabled for TX and RX.
   }
   else
   {
@@ -68,12 +70,14 @@ void loop()
 #ifdef VERBOSE
   Serial.print(F("> [CC1101] Receive... "));
 #endif
-  int cc_rx_state = cc.receive(byteArr, sizeof(byteArr) / sizeof(byteArr[0]) + 1); // +1
-  if (cc_rx_state == ERR_NONE)
+  // int cc_rx_state = cc.receive(byteArr, sizeof(byteArr) / sizeof(byteArr[0]) + 1); // +1
+  int cc_rx_state = ELECHOUSE_cc1101.CheckReceiveFlag();
+  if (cc_rx_state && ELECHOUSE_cc1101.CheckCRC())
   {
 #ifdef DEBUG
     Serial.print(F("ERR_NONE "));
 #endif
+    int byteArrLen = ELECHOUSE_cc1101.ReceiveData(byteArr);
     // check packet size
     boolean equalPacketSize = (byteArr[0] == (sizeof(byteArr) / sizeof(byteArr[0]))) ? true : false;
     if (equalPacketSize)
@@ -83,6 +87,7 @@ void loop()
 #endif
       // add
       byteArr[sizeof(byteArr) / sizeof(byteArr[0])] = '\0';
+      byteArr[byteArrLen] = '\0';
       // i = 1 remove length byte
       // print char
       if ((char)byteArr[1] == 'Z')
@@ -95,9 +100,9 @@ void loop()
           }
         }
         Serial.print(F(",RSSI:"));
-        Serial.print(cc.getRSSI());
+        Serial.print(ELECHOUSE_cc1101.getRssi());
         Serial.print(F(",LQI:"));
-        Serial.println(cc.getLQI());
+        Serial.println(ELECHOUSE_cc1101.getLqi());
       }
 #ifdef DEBUG
       else
@@ -126,14 +131,6 @@ void loop()
 #endif
   }
 #ifdef DEBUG
-  else if (cc_rx_state == ERR_CRC_MISMATCH)
-  {
-    Serial.println(F("ERR CRC MISMATCH"));
-  }
-  else if (cc_rx_state == ERR_RX_TIMEOUT)
-  {
-    Serial.println(F("ERR RX TIMEOUT"));
-  }
   else
   {
     Serial.print(F("ERR "));
