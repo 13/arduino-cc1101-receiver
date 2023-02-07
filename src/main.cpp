@@ -72,7 +72,7 @@ void loop()
   if (cc_rx_state == ERR_NONE)
   {
 #ifdef DEBUG
-    Serial.print(F("ERR_NONE "));
+    Serial.print(F("OK "));
 #endif
     // check packet size
     boolean equalPacketSize = (byteArr[0] == (sizeof(byteArr) / sizeof(byteArr[0]))) ? true : false;
@@ -104,6 +104,7 @@ void loop()
       {
         Serial.print(F("> [CC1101] Receive... "));
         Serial.println(F("ERR Z"));
+        Serial.print(F("> "));
         for (uint8_t i = 0; i < sizeof(byteArr); i++)
         {
           Serial.print((char)byteArr[i]);
@@ -117,6 +118,7 @@ void loop()
     {
       Serial.print(F("ERR LENGTH: "));
       Serial.println(byteArr[0]);
+      Serial.print(F("> "));
       for (uint8_t i = 1; i < byteArr[0]; i++)
       {
         Serial.print((char)byteArr[i]);
