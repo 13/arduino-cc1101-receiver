@@ -80,9 +80,9 @@ void loop()
 #endif
       int byteArrLen = ELECHOUSE_cc1101.ReceiveData(byteArr);
       // check packet size
-      boolean equalPacketSize = (byteArr[0] == (sizeof(byteArr) / sizeof(byteArr[0]))) ? true : false;
+      /*boolean equalPacketSize = (byteArr[0] == (sizeof(byteArr) / sizeof(byteArr[0]))) ? true : false;
       if (equalPacketSize)
-      {
+      {*/
 #ifdef VERBOSE
         Serial.println(F("OK"));
 #endif
@@ -91,22 +91,22 @@ void loop()
         byteArr[byteArrLen] = '\0';
         // i = 1 remove length byte
         // print char
-        if ((char)byteArr[1] == 'Z')
-        {
-          for (uint8_t i = 1; i < sizeof(byteArr); i++)
+        //if ((char)byteArr[1] == 'Z')
+        //{
+          for (uint8_t i = 0; i < byteArrLen; i++)
           {
-            if (byteArr[i] != 32)
-            {
+            //if (byteArr[i] != 32)
+            //{
               Serial.print((char)byteArr[i]);
-            }
+            //}
           }
           Serial.print(F(",RSSI:"));
           Serial.print(ELECHOUSE_cc1101.getRssi());
           Serial.print(F(",LQI:"));
           Serial.println(ELECHOUSE_cc1101.getLqi());
-        }
+        //}
 #ifdef DEBUG
-        else
+        /*else
         {
           Serial.println(F("ERR Z"));
           for (uint8_t i = 0; i < sizeof(byteArr); i++)
@@ -114,11 +114,11 @@ void loop()
             Serial.print((char)byteArr[i]);
           }
           Serial.println();
-        }
+        }*/
 #endif
-      }
+      //}
 #ifdef DEBUG
-      else
+      /*else
       {
         Serial.print(F("ERR LENGTH: "));
         Serial.println(byteArr[0]);
@@ -127,7 +127,7 @@ void loop()
           Serial.print((char)byteArr[i]);
         }
         Serial.println();
-      }
+      }*/
 #endif
     }
 #ifdef DEBUG
