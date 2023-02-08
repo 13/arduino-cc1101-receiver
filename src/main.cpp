@@ -89,8 +89,11 @@ void loop()
       {
         for (uint8_t i = 1; i < sizeof(byteArr); i++)
         {
-          // Filter space and full stop
-          if (byteArr[i] != 32 && byteArr[i] != 46)
+          // Filter [0-9A-Za-z,:]
+          if ((mbyteArr[i] >= '0' && byteArr[i] <= '9') ||
+              (mbyteArr[i] >= 'A' && mbyteArr[i] <= 'Z') ||
+              (mbyteArr[i] >= 'a' && mbyteArr[i] <= 'z') ||
+              byteArr[i] == ',' || byteArr[i] == ':' || byteArr[i] == '-')
           {
             Serial.print((char)byteArr[i]);
           }
