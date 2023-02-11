@@ -76,59 +76,26 @@ void loop()
     if (ELECHOUSE_cc1101.CheckCRC())
     {
 #ifdef DEBUG
-        Serial.print(F("CRC "));
+      Serial.print(F("CRC "));
 #endif
       int byteArrLen = ELECHOUSE_cc1101.ReceiveData(byteArr);
-      // check packet size
-      /*boolean equalPacketSize = (byteArr[0] == (sizeof(byteArr) / sizeof(byteArr[0]))) ? true : false;
-      if (equalPacketSize)
-      {*/
+
 #ifdef VERBOSE
-        Serial.println(F("OK"));
+      Serial.println(F("OK"));
 #endif
-        // add
-        // byteArr[sizeof(byteArr) / sizeof(byteArr[0])] = '\0';
-        byteArr[byteArrLen] = '\0';
-        // i = 1 remove length byte
-        // print char
-        //if ((char)byteArr[1] == 'Z')
-        //{
-          for (uint8_t i = 0; i < byteArrLen; i++)
-          {
-            //if (byteArr[i] != 32)
-            //{
-              Serial.print((char)byteArr[i]);
-            //}
-          }
-          Serial.print(F(",RSSI:"));
-          Serial.print(ELECHOUSE_cc1101.getRssi());
-          Serial.print(F(",LQI:"));
-          Serial.println(ELECHOUSE_cc1101.getLqi());
-        //}
 #ifdef DEBUG
-        /*else
-        {
-          Serial.println(F("ERR Z"));
-          for (uint8_t i = 0; i < sizeof(byteArr); i++)
-          {
-            Serial.print((char)byteArr[i]);
-          }
-          Serial.println();
-        }*/
+      Serial.print(F("> [CC1101] Length: "));
+      Serial.println(byteArrLen);
 #endif
-      //}
-#ifdef DEBUG
-      /*else
+      // byteArr[byteArrLen] = '\0';
+      for (uint8_t i = 0; i < byteArrLen; i++)
       {
-        Serial.print(F("ERR LENGTH: "));
-        Serial.println(byteArr[0]);
-        for (uint8_t i = 1; i < byteArr[0]; i++)
-        {
-          Serial.print((char)byteArr[i]);
-        }
-        Serial.println();
-      }*/
-#endif
+        Serial.print((char)byteArr[i]);
+      }
+      Serial.print(F(",RSSI:"));
+      Serial.print(ELECHOUSE_cc1101.getRssi());
+      Serial.print(F(",LQI:"));
+      Serial.println(ELECHOUSE_cc1101.getLqi());
     }
 #ifdef DEBUG
     else
