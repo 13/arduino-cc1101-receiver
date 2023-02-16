@@ -9,10 +9,6 @@
 // GDO0 pin:  2
 CC1101 cc = new Module(10, GD0, RADIOLIB_NC);
 
-// receive
-const uint8_t byteArrSize = 61;
-byte byteArr[byteArrSize] = {0};
-
 #ifdef DEBUG
 // one minute mark
 #define MARK
@@ -65,6 +61,11 @@ void loop()
 #ifdef MARK
   printMARK();
 #endif
+
+// receive
+const uint8_t byteArrSize = 61;
+byte byteArr[byteArrSize] = {0};
+
 #ifdef VERBOSE
   Serial.print(F("> [CC1101] Receive... "));
 #endif
