@@ -104,9 +104,9 @@ void loop()
         Serial.print((char)byteArr[i]);
       }
       Serial.print(F(",RSSI:"));
-      Serial.print(ELECHOUSE_cc1101.getRssi());
-      Serial.print(F(",LQI:"));
-      Serial.println(ELECHOUSE_cc1101.getLqi());
+      Serial.println(ELECHOUSE_cc1101.getRssi());
+      // Serial.print(F(",LQI:"));
+      // Serial.println(ELECHOUSE_cc1101.getLqi());
     }
 #ifdef DEBUG
     else
