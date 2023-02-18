@@ -32,6 +32,8 @@ void setup()
   Serial.println(F("> "));
   Serial.print(F("> Booting... Compiled: "));
   Serial.println(GIT_VERSION);
+  Serial.print(F("> Node ID: "));
+  Serial.println(String(getUniqueID(), HEX));
 #ifdef VERBOSE
   Serial.print(("> Mode: "));
   Serial.print(F("VERBOSE "));
