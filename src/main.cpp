@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <EEPROM.h>
 #include <RadioLib.h>
 #include "credentials.h"
 
@@ -18,6 +19,7 @@ uint32_t countMsg = 0;
 
 // platformio fix
 void printMARK();
+int getUniqueID();
 
 void setup()
 {
@@ -31,6 +33,8 @@ void setup()
   Serial.println(F("> "));
   Serial.print(F("> Booting... Compiled: "));
   Serial.println(GIT_VERSION);
+  Serial.print(F("> Node ID: "));
+  Serial.println(String(getUniqueID(), HEX));
 #ifdef VERBOSE
   Serial.print(("> Mode: "));
   Serial.print(F("VERBOSE "));
@@ -50,6 +54,20 @@ void setup()
   {
     Serial.print(F("ERR "));
     Serial.println(cc_state);
+    while (true)
+      ;
+  }
+  // Enabling address filtering
+  Serial.print(F("> [CC1101] Enabling Address Filtering... "));
+  int cc_af_state = radio.setNodeAddress(0x01, 1);
+  if (cc_af_state == RADIOLIB_ERR_NONE)
+  {
+    Serial.println(F("OK"));
+  }
+  else
+  {
+    Serial.print(F("ERR "));
+    Serial.println(cc_af_state);
     while (true)
       ;
   }
@@ -80,7 +98,9 @@ void loop()
     Serial.print(F(",RSSI:"));
     Serial.print(radio.getRSSI());
     Serial.print(F(",LQI:"));
-    Serial.println(radio.getLQI());
+    Serial.print(radio.getLQI());
+    Serial.print(F(",RN:"));
+    Serial.println(String(getUniqueID(), HEX));
   }
 }
 
@@ -102,3 +122,30 @@ void printMARK()
   }
 }
 #endif
+
+// Last 4 digits of ChipID
+int getUniqueID()
+{
+  int uid = 0;
+  // read EEPROM serial number
+  int address = 13;
+  int serialNumber;
+  if (EEPROM.read(address) != 255)
+  {
+    EEPROM.get(address, serialNumber);
+    uid = serialNumber;
+#ifdef DEBUG
+    Serial.print("[EEPROM]: SN ");
+    Serial.print(uid);
+    Serial.print(" -> HEX ");
+    Serial.println(String(serialNumber, HEX));
+#endif
+  }
+#ifdef DEBUG
+  else
+  {
+    Serial.println("[EEPROM]: SN ERROR EMPTY USING DEFAULT");
+  }
+#endif
+  return uid;
+}
