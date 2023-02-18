@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <EEPROM.h>
 #include <ELECHOUSE_CC1101_SRC_DRV.h>
 #include "credentials.h"
 
@@ -17,6 +18,7 @@ uint32_t countMsg = 0;
 
 // platformio fix
 void printMARK();
+int getUniqueID();
 
 void setup()
 {
@@ -52,9 +54,9 @@ void setup()
     ELECHOUSE_cc1101.setModulation(0); // set modulation mode. 0 = 2-FSK, 1 = GFSK, 2 = ASK/OOK, 3 = 4-FSK, 4 = MSK.
     ELECHOUSE_cc1101.setMHZ(CC_FREQ);  // Here you can set your basic frequency. The lib calculates the frequency automatically (default = 433.92).The cc1101 can: 300-348 MHZ, 387-464MHZ and 779-928MHZ. Read More info from datasheet.
     // ELECHOUSE_cc1101.setPA(CC_POWER);  // Set TxPower. The following settings are possible depending on the frequency band.  (-30  -20  -15  -10  -6    0    5    7    10   11   12) Default is max!
-    ELECHOUSE_cc1101.setSyncMode(2);   // Combined sync-word qualifier mode. 0 = No preamble/sync. 1 = 16 sync word bits detected. 2 = 16/16 sync word bits detected. 3 = 30/32 sync word bits detected. 4 = No preamble/sync, carrier-sense above threshold. 5 = 15/16 + carrier-sense above threshold. 6 = 16/16 + carrier-sense above threshold. 7 = 30/32 + carrier-sense above threshold.
-    ELECHOUSE_cc1101.setCrc(1);        // 1 = CRC calculation in TX and CRC check in RX enabled. 0 = CRC disabled for TX and RX.
-    ELECHOUSE_cc1101.setCRC_AF(1);     // Enable automatic flush of RX FIFO when CRC is not OK. This requires that only one packet is in the RXIFIFO and that packet length is limited to the RX FIFO size.
+    ELECHOUSE_cc1101.setSyncMode(2); // Combined sync-word qualifier mode. 0 = No preamble/sync. 1 = 16 sync word bits detected. 2 = 16/16 sync word bits detected. 3 = 30/32 sync word bits detected. 4 = No preamble/sync, carrier-sense above threshold. 5 = 15/16 + carrier-sense above threshold. 6 = 16/16 + carrier-sense above threshold. 7 = 30/32 + carrier-sense above threshold.
+    ELECHOUSE_cc1101.setCrc(1);      // 1 = CRC calculation in TX and CRC check in RX enabled. 0 = CRC disabled for TX and RX.
+    ELECHOUSE_cc1101.setCRC_AF(1);   // Enable automatic flush of RX FIFO when CRC is not OK. This requires that only one packet is in the RXIFIFO and that packet length is limited to the RX FIFO size.
   }
   else
   {
@@ -104,9 +106,11 @@ void loop()
         Serial.print((char)byteArr[i]);
       }
       Serial.print(F(",RSSI:"));
-      Serial.println(ELECHOUSE_cc1101.getRssi());
+      Serial.print(ELECHOUSE_cc1101.getRssi());
       // Serial.print(F(",LQI:"));
       // Serial.println(ELECHOUSE_cc1101.getLqi());
+      Serial.print(F(",RN:"));
+      Serial.println(String(getUniqueID(), HEX));
     }
 #ifdef DEBUG
     else
@@ -118,9 +122,11 @@ void loop()
         Serial.print((char)byteArr[i]);
       }
       Serial.print(F(",RSSI:"));
-      Serial.println(ELECHOUSE_cc1101.getRssi());
+      Serial.print(ELECHOUSE_cc1101.getRssi());
       // Serial.print(F(",LQI:"));
       // Serial.println(ELECHOUSE_cc1101.getLqi());
+      Serial.print(F(",RN:"));
+      Serial.println(String(getUniqueID(), HEX));
 #endif
     }
 #endif
@@ -145,3 +151,30 @@ void printMARK()
   }
 }
 #endif
+
+// Last 4 digits of ChipID
+int getUniqueID()
+{
+  int uid = 0;
+  // read EEPROM serial number
+  int address = 13;
+  int serialNumber;
+  if (EEPROM.read(address) != 255)
+  {
+    EEPROM.get(address, serialNumber);
+    uid = serialNumber;
+#ifdef DEBUG
+    Serial.print("[EEPROM]: SN ");
+    Serial.print(uid);
+    Serial.print(" -> HEX ");
+    Serial.println(String(serialNumber, HEX));
+#endif
+  }
+#ifdef DEBUG
+  else
+  {
+    Serial.println("[EEPROM]: SN ERROR EMPTY USING DEFAULT");
+  }
+#endif
+  return uid;
+}
