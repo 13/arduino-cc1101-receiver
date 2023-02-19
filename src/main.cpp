@@ -91,12 +91,26 @@ void loop()
     Serial.print(F("> [CC1101] Length: "));
     Serial.println(sizeof(byteArr));
 #endif
+    // byteArr[sizeof(byteArr) / sizeof(byteArr[0])] = '\0'; // 0 \0
+
     for (uint8_t i = 0; i < sizeof(byteArr); i++)
     {
-      Serial.print((char)byteArr[i]);
+      Serial.print(byteArr[i], HEX);
+    }
+    Serial.println();
+
+    for (uint8_t i = 0; i < sizeof(byteArr); i++)
+    {
+      if ((byteArr[i] >= '0' && byteArr[i] <= '9') ||
+          (byteArr[i] >= 'A' && byteArr[i] <= 'Z') ||
+          (byteArr[i] >= 'a' && byteArr[i] <= 'z') ||
+          byteArr[i] == ',' || byteArr[i] == ':' || byteArr[i] == '-')
+      {
+        Serial.print((char)byteArr[i]);
+      }
     }
     Serial.print(F(",RSSI:"));
-    Serial.print(radio.getRSSI());
+    Serial.print((int)radio.getRSSI());
     Serial.print(F(",LQI:"));
     Serial.print(radio.getLQI());
     Serial.print(F(",RN:"));
@@ -134,18 +148,6 @@ int getUniqueID()
   {
     EEPROM.get(address, serialNumber);
     uid = serialNumber;
-#ifdef DEBUG
-    Serial.print("[EEPROM]: SN ");
-    Serial.print(uid);
-    Serial.print(" -> HEX ");
-    Serial.println(String(serialNumber, HEX));
-#endif
   }
-#ifdef DEBUG
-  else
-  {
-    Serial.println("[EEPROM]: SN ERROR EMPTY USING DEFAULT");
-  }
-#endif
   return uid;
 }
