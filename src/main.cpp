@@ -16,9 +16,40 @@ unsigned long lastMillis = 0L;
 uint32_t countMsg = 0;
 #endif
 
-// platformio fix
-void printMARK();
-int getUniqueID();
+// supplementary functions
+#ifdef MARK
+void printMARK()
+{
+  if (countMsg == 0)
+  {
+    Serial.println(F("> [MARK] Starting... OK"));
+    countMsg++;
+  }
+  if (millis() - lastMillis >= INTERVAL_1MIN)
+  {
+    Serial.print(F("> [MARK] Uptime: "));
+    Serial.print(countMsg);
+    Serial.println(F(" min"));
+    countMsg++;
+    lastMillis += INTERVAL_1MIN;
+  }
+}
+#endif
+
+// Last 4 digits of ChipID
+int getUniqueID()
+{
+  int uid = 0;
+  // read EEPROM serial number
+  int address = 13;
+  int serialNumber;
+  if (EEPROM.read(address) != 255)
+  {
+    EEPROM.get(address, serialNumber);
+    uid = serialNumber;
+  }
+  return uid;
+}
 
 void setup()
 {
@@ -36,12 +67,16 @@ void setup()
   Serial.println(String(getUniqueID(), HEX));
 #ifdef VERBOSE
   Serial.print(("> Mode: "));
-  Serial.print(F("VERBOSE "));
+#ifdef GD0
+  Serial.print(F("GD0 "));
 #endif
+  Serial.print(F("VERBOSE "));
 #ifdef DEBUG
   Serial.print(F("DEBUG"));
 #endif
   Serial.println();
+#endif
+
   // Start CC1101
   Serial.print(F("> [CC1101] Initializing... "));
   int cc_state = ELECHOUSE_cc1101.getCC1101();
@@ -135,38 +170,4 @@ void loop()
     }
 #endif
   }
-}
-
-#ifdef MARK
-void printMARK()
-{
-  if (countMsg == 0)
-  {
-    Serial.println(F("> [MARK] Starting... OK"));
-    countMsg++;
-  }
-  if (millis() - lastMillis >= INTERVAL_1MIN)
-  {
-    Serial.print(F("> [MARK] Uptime: "));
-    Serial.print(countMsg);
-    Serial.println(F(" min"));
-    countMsg++;
-    lastMillis += INTERVAL_1MIN;
-  }
-}
-#endif
-
-// Last 4 digits of ChipID
-int getUniqueID()
-{
-  int uid = 0;
-  // read EEPROM serial number
-  int address = 13;
-  int serialNumber;
-  if (EEPROM.read(address) != 255)
-  {
-    EEPROM.get(address, serialNumber);
-    uid = serialNumber;
-  }
-  return uid;
 }
