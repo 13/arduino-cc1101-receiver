@@ -17,9 +17,39 @@ unsigned long lastMillis = 0L;
 uint32_t countMsg = 0;
 #endif
 
-// platformio fix
-void printMARK();
-int getUniqueID();
+#ifdef MARK
+void printMARK()
+{
+  if (countMsg == 0)
+  {
+    Serial.println(F("> [MARK] Starting... OK"));
+    countMsg++;
+  }
+  if (millis() - lastMillis >= INTERVAL_1MIN)
+  {
+    Serial.print(F("> [MARK] Uptime: "));
+    Serial.print(countMsg);
+    Serial.println(F(" min"));
+    countMsg++;
+    lastMillis += INTERVAL_1MIN;
+  }
+}
+#endif
+
+// Last 4 digits of ChipID
+int getUniqueID()
+{
+  int uid = 0;
+  // read EEPROM serial number
+  int address = 13;
+  int serialNumber;
+  if (EEPROM.read(address) != 255)
+  {
+    EEPROM.get(address, serialNumber);
+    uid = serialNumber;
+  }
+  return uid;
+}
 
 void setup()
 {
@@ -37,12 +67,16 @@ void setup()
   Serial.println(String(getUniqueID(), HEX));
 #ifdef VERBOSE
   Serial.print(("> Mode: "));
-  Serial.print(F("VERBOSE "));
+#ifdef GD0
+  Serial.print(F("GD0 "));
 #endif
+  Serial.print(F("VERBOSE "));
 #ifdef DEBUG
   Serial.print(F("DEBUG"));
 #endif
   Serial.println();
+#endif
+
   // Start CC1101
   Serial.print(F("> [CC1101] Initializing... "));
   int cc_state = radio.begin(CC_FREQ);
@@ -80,6 +114,7 @@ void loop()
 #endif
   byte byteArr[byteArrSize] = {0};
   int state = radio.receive(byteArr, byteArrSize);
+  byteArr[sizeof(byteArr) / sizeof(byteArr[0])] = '\0'; // 0 \0
   if (state == RADIOLIB_ERR_NONE)
   {
 
@@ -91,16 +126,9 @@ void loop()
     Serial.print(F("> [CC1101] Length: "));
     Serial.println(sizeof(byteArr));
 #endif
-    // byteArr[sizeof(byteArr) / sizeof(byteArr[0])] = '\0'; // 0 \0
-
     for (uint8_t i = 0; i < sizeof(byteArr); i++)
     {
-      Serial.print(byteArr[i], HEX);
-    }
-    Serial.println();
-
-    for (uint8_t i = 0; i < sizeof(byteArr); i++)
-    {
+      // Filter [0-9A-Za-z,:]
       if ((byteArr[i] >= '0' && byteArr[i] <= '9') ||
           (byteArr[i] >= 'A' && byteArr[i] <= 'Z') ||
           (byteArr[i] >= 'a' && byteArr[i] <= 'z') ||
@@ -114,40 +142,8 @@ void loop()
     Serial.print(F(",LQI:"));
     Serial.print(radio.getLQI());
     Serial.print(F(",RN:"));
-    Serial.println(String(getUniqueID(), HEX));
+    Serial.print(String(getUniqueID(), HEX));
+    Serial.print(F(",RF:"));
+    Serial.println(String(GIT_VERSION_SHORT));
   }
-}
-
-#ifdef MARK
-void printMARK()
-{
-  if (countMsg == 0)
-  {
-    Serial.println(F("> [MARK] Starting... OK"));
-    countMsg++;
-  }
-  if (millis() - lastMillis >= INTERVAL_1MIN)
-  {
-    Serial.print(F("> [MARK] Uptime: "));
-    Serial.print(countMsg);
-    Serial.println(F(" min"));
-    countMsg++;
-    lastMillis += INTERVAL_1MIN;
-  }
-}
-#endif
-
-// Last 4 digits of ChipID
-int getUniqueID()
-{
-  int uid = 0;
-  // read EEPROM serial number
-  int address = 13;
-  int serialNumber;
-  if (EEPROM.read(address) != 255)
-  {
-    EEPROM.get(address, serialNumber);
-    uid = serialNumber;
-  }
-  return uid;
 }
