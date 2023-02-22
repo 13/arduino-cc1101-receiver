@@ -149,7 +149,9 @@ void loop()
       Serial.print(F(",LQI:"));
       Serial.print(ELECHOUSE_cc1101.getLqi());
       Serial.print(F(",RN:"));
-      Serial.println(String(getUniqueID(), HEX));
+      Serial.print(String(getUniqueID(), HEX));
+      Serial.print(F(",RF:"));
+      Serial.println(String(GIT_VERSION_SHORT));
     }
 #ifdef DEBUG
     else
@@ -165,7 +167,9 @@ void loop()
       Serial.print(F(",LQI:"));
       Serial.print(ELECHOUSE_cc1101.getLqi());
       Serial.print(F(",RN:"));
-      Serial.println(String(getUniqueID(), HEX));
+      Serial.print(String(getUniqueID(), HEX));
+      Serial.print(F(",RF:"));
+      Serial.println(String(GIT_VERSION_SHORT));
 #endif
     }
 #endif
