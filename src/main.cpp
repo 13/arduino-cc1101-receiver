@@ -132,17 +132,22 @@ void loop()
       Serial.print(F("CRC "));
 #endif
       int byteArrLen = ELECHOUSE_cc1101.ReceiveData(byteArr);
-
+      byteArr[byteArrLen] = '\0'; // 0, \0
 #ifdef VERBOSE
       Serial.println(F("OK"));
-
       Serial.print(F("> [CC1101] Length: "));
       Serial.println(byteArrLen);
 #endif
-      // byteArr[byteArrLen] = '0'; // 0, \0
       for (uint8_t i = 0; i < byteArrLen; i++)
       {
-        Serial.print((char)byteArr[i]);
+        // Filter [0-9A-Za-z,:]
+        if ((byteArr[i] >= '0' && byteArr[i] <= '9') ||
+            (byteArr[i] >= 'A' && byteArr[i] <= 'Z') ||
+            (byteArr[i] >= 'a' && byteArr[i] <= 'z') ||
+            byteArr[i] == ',' || byteArr[i] == ':' || byteArr[i] == '-')
+        {
+          Serial.print((char)byteArr[i]);
+        }
       }
       Serial.print(F(",RSSI:"));
       Serial.print(ELECHOUSE_cc1101.getRssi());
