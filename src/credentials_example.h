@@ -11,3 +11,6 @@
 #ifndef GIT_VERSION
 #define GIT_VERSION "unknown"
 #endif
+#ifndef GIT_VERSION_SHORT
+#define GIT_VERSION_SHORT "0"
+#endif
