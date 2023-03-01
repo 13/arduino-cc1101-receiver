@@ -20,6 +20,31 @@ An Arduino CC1101 receiver
 
 The arduino-cc1101-receiver receives a 61 characters string and adds RSSI/LQI.
 
+```
+Z:60,N:87,T1:29,H1:817,T2:25,T3:42,P1:9260,A1:753,V1:38
+
+Z = package length
+N = node id
+I = package counter
+T = temperature
+H = humidity
+P = pressure
+A = altitude
+V = voltage
+M = motion
+S = switch
+
+, = delimiter
+
+X1 = si7021
+X2 = ds18b20
+X3 = bmp280
+X4 = bme680
+
+RSSI = Signal strength
+RN = receiver node id
+```
+
 Moreover, it filters ERR_LENGTH_MISMATCH, ERR_CRC_MISMATCH AND ERR_RX_TIMEOUT.
 
 ### Built With
