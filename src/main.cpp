@@ -111,6 +111,7 @@ void loop()
 #ifdef MARK
   printMARK();
 #endif
+
 #ifdef GD0
   if (ELECHOUSE_cc1101.CheckReceiveFlag())
 #else
@@ -161,7 +162,6 @@ void loop()
 #ifdef DEBUG
     else
     {
-      Serial.println(F("ERR CRC"));
 #ifdef DEBUG_CRC
       for (uint8_t i = 0; i < byteArrSize; i++)
       {
