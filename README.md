@@ -45,13 +45,11 @@ RSSI = Signal strength
 RN = receiver node id
 ```
 
-Moreover, it filters ERR_LENGTH_MISMATCH, ERR_CRC_MISMATCH AND ERR_RX_TIMEOUT.
-
 ### Built With
 
 * [VSCode](https://github.com/microsoft/vscode)
 * [PlatformIO](https://platformio.org/)
-* [RadioLib](https://github.com/jgromes/RadioLib)
+* [SmartRC-CC1101-Driver-Lib](https://github.com/LSatan/SmartRC-CC1101-Driver-Lib/)
 
 ## Getting Started
 
@@ -80,7 +78,7 @@ git clone https://github.com/13/arduino-cc1101-receiver.git
 
 ## Release History
 
-* 1.1.0
+* v10
     * Initial release
 
 ## Contact
