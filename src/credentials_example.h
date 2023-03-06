@@ -1,4 +1,5 @@
 #define VERBOSE
+// #define VERBOSE_FW // Firmware Version
 // #define DEBUG
 // #define DEBUG_CRC
 

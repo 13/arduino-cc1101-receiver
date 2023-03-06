@@ -155,9 +155,11 @@ void loop()
       Serial.print(F(",LQI:"));
       Serial.print(ELECHOUSE_cc1101.getLqi());
       Serial.print(F(",RN:"));
-      Serial.print(String(getUniqueID(), HEX));
+      Serial.println(String(getUniqueID(), HEX));
+#ifdef VERBOSE_FW
       Serial.print(F(",RF:"));
       Serial.println(String(GIT_VERSION_SHORT));
+#endif
     }
 #ifdef DEBUG
     else
