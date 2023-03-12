@@ -6,6 +6,7 @@
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
+#include <ArduinoJson.h>
 #endif
 #include <ELECHOUSE_CC1101_SRC_DRV.h>
 #include "credentials.h"
@@ -48,13 +49,13 @@ String getUniqueID()
 {
   String uid = "0";
 
-  // read EEPROM serial number
-  int address = 13;
-  int serialNumber;
 #if defined(ESP8266)
   uid = WiFi.macAddress().substring(12);
   uid.replace(":", "");
 #else
+  // read EEPROM serial number
+  int address = 13;
+  int serialNumber;
   if (EEPROM.read(address) != 255)
   {
     EEPROM.get(address, serialNumber);
@@ -165,6 +166,9 @@ void loop()
       Serial.print(F("> [CC1101] Length: "));
       Serial.println(byteArrLen);
 #endif
+#if defined(ESP8266)
+      String input_str = "";
+#endif
       for (uint8_t i = 0; i < byteArrLen; i++)
       {
         // Filter [0-9A-Za-z,:]
@@ -174,14 +178,67 @@ void loop()
             byteArr[i] == ',' || byteArr[i] == ':' || byteArr[i] == '-')
         {
           Serial.print((char)byteArr[i]);
+#if defined(ESP8266)
+          input_str += (char)byteArr[i];
+#endif
         }
       }
+      int rssi = ELECHOUSE_cc1101.getRssi();
+      int lqi = ELECHOUSE_cc1101.getLqi();
       Serial.print(F(",RSSI:"));
-      Serial.print(ELECHOUSE_cc1101.getRssi());
+      Serial.print(rssi);
       Serial.print(F(",LQI:"));
-      Serial.print(ELECHOUSE_cc1101.getLqi());
+      Serial.print(lqi);
       Serial.print(F(",RN:"));
       Serial.println(getUniqueID());
+#if defined(ESP8266)
+      input_str += ",RSSI:";
+      input_str += String(rssi);
+      input_str += ",LQI:";
+      input_str += String(lqi);
+      input_str += ",RN:";
+      input_str += getUniqueID();
+      // Serial.println(input_str);
+
+      // Create a DynamicJsonDocument object
+      DynamicJsonDocument doc(1024);
+
+      // Split the input string into key-value pairs using comma separator
+      int pos = 0;
+      while (pos < input_str.length())
+      {
+        int sep_pos = input_str.indexOf(',', pos);
+        if (sep_pos == -1)
+        {
+          sep_pos = input_str.length();
+        }
+        String pair = input_str.substring(pos, sep_pos);
+        int colon_pos = pair.indexOf(':');
+        if (colon_pos != -1)
+        {
+          String key = pair.substring(0, colon_pos);
+          String value_str = pair.substring(colon_pos + 1);
+          if (key.startsWith("N") || key.startsWith("RN") || key.startsWith("F") || key.startsWith("RF"))
+          {
+            doc[key] = value_str;
+          }
+          else if ((key.startsWith("T") || key.startsWith("H") || key.startsWith("P")) || (key.startsWith("V") && value_str.length() > 1))
+          {
+            float value = value_str.toFloat() / 10.0;
+            doc[key] = round(value * 10.0) / 10.0;
+          }
+          else
+          {
+            int value = value_str.toInt();
+            doc[key] = value;
+          }
+        }
+        pos = sep_pos + 1;
+      }
+      doc.remove("Z");
+      // Print the JSON object to the serial monitor
+      serializeJsonPretty(doc, Serial);
+#endif
 #ifdef VERBOSE_FW
       Serial.print(F(",RF:"));
       Serial.println(String(GIT_VERSION_SHORT));
