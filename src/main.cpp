@@ -7,11 +7,17 @@
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
 #include <ArduinoJson.h>
+#include <PubSubClient.h>
 #endif
 #include <ELECHOUSE_CC1101_SRC_DRV.h>
 #include "credentials.h"
 
 // Edit credentials.h
+
+#if defined(ESP8266)
+WiFiClient espClient;
+PubSubClient client(espClient);
+#endif
 
 // cc1101
 const uint8_t byteArrSize = 61;
@@ -84,6 +90,15 @@ void setup()
   WiFi.setAutoConnect(true);
   WiFi.setAutoReconnect(true);
   WiFi.begin(wifi_ssid, wifi_pass);
+  while (WiFi.status() != WL_CONNECTED)
+  {
+    delay(1000);
+    Serial.println("Connecting to WiFi...");
+  }
+
+  Serial.println("Connected to WiFi");
+
+  client.setServer(mqtt_server, mqtt_port);
 #endif
   Serial.println(getUniqueID());
 #ifdef VERBOSE
@@ -237,7 +252,12 @@ void loop()
       }
       doc.remove("Z");
       // Print the JSON object to the serial monitor
-      serializeJsonPretty(doc, Serial);
+      // serializeJsonPretty(doc, Serial);
+      String jsonStr;
+      serializeJson(doc, jsonStr);
+      String topic = "sensors2/" + String(doc["N"].as<String>()) + "/json";
+      client.publish(topic.c_str(), jsonStr.c_str(), true);
+      Serial.println("> [MQTT]: Message sent");
 #endif
 #ifdef VERBOSE_FW
       Serial.print(F(",RF:"));

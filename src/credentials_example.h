@@ -7,9 +7,15 @@
 #define CC_POWER 12
 #define CC_DELAY 200
 #if defined(ESP8266)
+// WiFi
 const char* wifi_ssid = "";
 const char* wifi_pass  = "";
-#define GD0 4 // GDO0 GPIO4 = D2
+// MQTT server credentials
+const char* mqtt_user = "";
+const char* mqtt_pass = "";
+const char* mqtt_server = "192.168.22.5";
+uint16_t mqtt_port = 1883;
+#define GD0 4 // for esp8266! GDO0 on gpio4 = D2
 #else
 #define GD0 2
 #endif
