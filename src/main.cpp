@@ -15,8 +15,40 @@
 // Edit credentials.h
 
 #if defined(ESP8266)
-WiFiClient espClient;
-PubSubClient client(espClient);
+WiFiClient wifiClient;
+PubSubClient mqttClient(wifiClient);
+
+void connectToWiFi()
+{
+  WiFi.disconnect();
+  WiFi.mode(WIFI_STA); // switch off AP
+  WiFi.setAutoConnect(true);
+  WiFi.setAutoReconnect(true);
+  WiFi.begin(wifi_ssid, wifi_pass);
+  Serial.print("> [WiFi] Connecting...");
+  while (WiFi.status() != WL_CONNECTED)
+  {
+    Serial.print(".");
+    delay(1000);
+  }
+  Serial.println(" OK");
+  if (WiFi.status() == WL_CONNECTED)
+  {
+    Serial.print("> [WiFi] IP: ");
+    Serial.println(WiFi.localIP().toString());
+  }
+}
+void connectToMqtt(String uid)
+{
+  mqttClient.setServer(mqtt_server, mqtt_port);
+  Serial.print("> [MQTT] Connecting...");
+  while (!mqttClient.connect(uid.c_str()))
+  {
+    Serial.print(".");
+    delay(1000);
+  }
+  Serial.println(" OK");
+}
 #endif
 
 // cc1101
@@ -84,22 +116,6 @@ void setup()
   Serial.print(F("> Booting... Compiled: "));
   Serial.println(GIT_VERSION);
   Serial.print(F("> Node ID: "));
-#if defined(ESP8266)
-  WiFi.disconnect();
-  WiFi.mode(WIFI_STA); // switch off AP
-  WiFi.setAutoConnect(true);
-  WiFi.setAutoReconnect(true);
-  WiFi.begin(wifi_ssid, wifi_pass);
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    delay(1000);
-    Serial.println("Connecting to WiFi...");
-  }
-
-  Serial.println("Connected to WiFi");
-
-  client.setServer(mqtt_server, mqtt_port);
-#endif
   Serial.println(getUniqueID());
 #ifdef VERBOSE
   Serial.print(("> Mode: "));
@@ -113,10 +129,10 @@ void setup()
   Serial.println();
 #endif
 #if defined(ESP8266)
+  connectToWiFi();
   if (WiFi.status() == WL_CONNECTED)
   {
-    Serial.print("> [WiFi]: IP ");
-    Serial.println(WiFi.localIP().toString());
+    connectToMqtt(getUniqueID());
   }
 #endif
   // Start CC1101
@@ -150,6 +166,17 @@ void setup()
 
 void loop()
 {
+#if defined(ESP8266)
+  if (WiFi.status() != WL_CONNECTED)
+  {
+    connectToWiFi();
+  }
+  if (!mqttClient.connected())
+  {
+    connectToMqtt(getUniqueID());
+  }
+  mqttClient.loop();
+#endif
 #ifdef MARK
   printMARK();
 #endif
@@ -255,9 +282,21 @@ void loop()
       // serializeJsonPretty(doc, Serial);
       String jsonStr;
       serializeJson(doc, jsonStr);
-      String topic = "sensors2/" + String(doc["N"].as<String>()) + "/json";
-      client.publish(topic.c_str(), jsonStr.c_str(), true);
-      Serial.println("> [MQTT]: Message sent");
+      String topic = String(mqtt_topic) + "/" + String(doc["N"].as<String>()) + "/json";
+      if (!mqttClient.connected())
+      {
+        Serial.println("> [MQTT] Not connected");
+        connectToMqtt(getUniqueID());
+      }
+      bool published = mqttClient.publish(topic.c_str(), jsonStr.c_str(), true);
+      if (published)
+      {
+        Serial.println("> [MQTT] Message published");
+      }
+      else
+      {
+        Serial.println("> [MQTT] Failed to publish message");
+      }
 #endif
 #ifdef VERBOSE_FW
       Serial.print(F(",RF:"));
