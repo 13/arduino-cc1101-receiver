@@ -1,5 +1,12 @@
 #include <Arduino.h>
+#if defined(ARDUINO_ARCH_AVR)
 #include <EEPROM.h>
+#endif
+#if defined(ESP8266)
+#include <ESP8266WiFi.h>
+#include <WiFiClient.h>
+#include <ESP8266WebServer.h>
+#endif
 #include <ELECHOUSE_CC1101_SRC_DRV.h>
 #include "credentials.h"
 
@@ -37,17 +44,23 @@ void printMARK()
 #endif
 
 // Last 4 digits of ChipID
-int getUniqueID()
+String getUniqueID()
 {
-  int uid = 0;
+  String uid = "0";
+
   // read EEPROM serial number
   int address = 13;
   int serialNumber;
+#if defined(ESP8266)
+  uid = WiFi.macAddress().substring(12);
+  uid.replace(":", "");
+#else
   if (EEPROM.read(address) != 255)
   {
     EEPROM.get(address, serialNumber);
-    uid = serialNumber;
+    uid = String(serialNumber, HEX);
   }
+#endif
   return uid;
 }
 
@@ -65,10 +78,13 @@ void setup()
   Serial.println(GIT_VERSION);
   Serial.print(F("> Node ID: "));
 #if defined(ESP8266)
-  Serial.println("00");
-#else
-  Serial.println(String(getUniqueID(), HEX));
+  WiFi.disconnect();
+  WiFi.mode(WIFI_STA); // switch off AP
+  WiFi.setAutoConnect(true);
+  WiFi.setAutoReconnect(true);
+  WiFi.begin(wifi_ssid, wifi_pass);
 #endif
+  Serial.println(getUniqueID());
 #ifdef VERBOSE
   Serial.print(("> Mode: "));
 #ifdef GD0
@@ -80,7 +96,13 @@ void setup()
 #endif
   Serial.println();
 #endif
-
+#if defined(ESP8266)
+  if (WiFi.status() == WL_CONNECTED)
+  {
+    Serial.print("> [WiFi]: IP ");
+    Serial.println(WiFi.localIP().toString());
+  }
+#endif
   // Start CC1101
   Serial.print(F("> [CC1101] Initializing... "));
   int cc_state = ELECHOUSE_cc1101.getCC1101();
@@ -159,11 +181,7 @@ void loop()
       Serial.print(F(",LQI:"));
       Serial.print(ELECHOUSE_cc1101.getLqi());
       Serial.print(F(",RN:"));
-#if defined(ESP8266)
-      Serial.println("00");
-#else
-      Serial.println(String(getUniqueID(), HEX));
-#endif
+      Serial.println(getUniqueID());
 #ifdef VERBOSE_FW
       Serial.print(F(",RF:"));
       Serial.println(String(GIT_VERSION_SHORT));
@@ -182,11 +200,7 @@ void loop()
       Serial.print(F(",LQI:"));
       Serial.print(ELECHOUSE_cc1101.getLqi());
       Serial.print(F(",RN:"));
-#if defined(ESP8266)
-      Serial.println("00");
-#else
-      Serial.println(String(getUniqueID(), HEX));
-#endif
+      Serial.println(getUniqueID());
       Serial.print(F(",RF:"));
       Serial.println(String(GIT_VERSION_SHORT));
 #endif

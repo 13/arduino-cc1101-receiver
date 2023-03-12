@@ -7,7 +7,9 @@
 #define CC_POWER 12
 #define CC_DELAY 200
 #if defined(ESP8266)
-#define GD0 4
+const char* wifi_ssid = "";
+const char* wifi_pass  = "";
+#define GD0 4 // GDO0 GPIO4 = D2
 #else
 #define GD0 2
 #endif
