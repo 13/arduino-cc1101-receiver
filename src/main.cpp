@@ -64,7 +64,11 @@ void setup()
   Serial.print(F("> Booting... Compiled: "));
   Serial.println(GIT_VERSION);
   Serial.print(F("> Node ID: "));
+#if defined(ESP8266)
+  Serial.println("00");
+#else
   Serial.println(String(getUniqueID(), HEX));
+#endif
 #ifdef VERBOSE
   Serial.print(("> Mode: "));
 #ifdef GD0
@@ -155,7 +159,11 @@ void loop()
       Serial.print(F(",LQI:"));
       Serial.print(ELECHOUSE_cc1101.getLqi());
       Serial.print(F(",RN:"));
+#if defined(ESP8266)
+      Serial.println("00");
+#else
       Serial.println(String(getUniqueID(), HEX));
+#endif
 #ifdef VERBOSE_FW
       Serial.print(F(",RF:"));
       Serial.println(String(GIT_VERSION_SHORT));
@@ -174,7 +182,11 @@ void loop()
       Serial.print(F(",LQI:"));
       Serial.print(ELECHOUSE_cc1101.getLqi());
       Serial.print(F(",RN:"));
-      Serial.print(String(getUniqueID(), HEX));
+#if defined(ESP8266)
+      Serial.println("00");
+#else
+      Serial.println(String(getUniqueID(), HEX));
+#endif
       Serial.print(F(",RF:"));
       Serial.println(String(GIT_VERSION_SHORT));
 #endif
