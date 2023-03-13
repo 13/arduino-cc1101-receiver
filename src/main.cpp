@@ -1,13 +1,12 @@
 #include <Arduino.h>
-#if defined(ARDUINO_ARCH_AVR)
-#include <EEPROM.h>
-#endif
 #if defined(ESP8266)
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
 #include <ArduinoJson.h>
 #include <PubSubClient.h>
+#else
+#include <EEPROM.h>
 #endif
 #include <ELECHOUSE_CC1101_SRC_DRV.h>
 #include "credentials.h"
