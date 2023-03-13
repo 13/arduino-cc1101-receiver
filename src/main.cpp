@@ -85,6 +85,10 @@ void printMARK()
     Serial.println(F("> [MARK] Starting... OK"));
     countMsg++;
   }
+  if (countMsg == UINT32_MAX)
+  {
+    countMsg = 0;
+  }
   if (millis() - lastMillis >= INTERVAL_1MIN)
   {
     Serial.print(F("> [MARK] Uptime: "));
