@@ -220,6 +220,8 @@ void loop()
       Serial.print(F("CRC "));
 #endif
       int byteArrLen = ELECHOUSE_cc1101.ReceiveData(byteArr);
+      int rssi = ELECHOUSE_cc1101.getRssi();
+      int lqi = ELECHOUSE_cc1101.getLqi();
       byteArr[byteArrLen] = '\0'; // 0, \0
 #ifdef VERBOSE
       Serial.println(F("OK"));
@@ -243,8 +245,6 @@ void loop()
 #endif
         }
       }
-      int rssi = ELECHOUSE_cc1101.getRssi();
-      int lqi = ELECHOUSE_cc1101.getLqi();
       Serial.print(F(",RSSI:"));
       Serial.print(rssi);
       Serial.print(F(",LQI:"));
