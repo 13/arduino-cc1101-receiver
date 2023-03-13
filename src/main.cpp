@@ -40,14 +40,24 @@ void connectToWiFi()
 }
 void connectToMqtt(String uid)
 {
-  mqttClient.setServer(mqtt_server, mqtt_port);
-  Serial.print("> [MQTT] Connecting...");
-  while (!mqttClient.connect(uid.c_str()))
+  while (!mqttClient.connected())
   {
-    Serial.print(".");
-    delay(1000);
+    Serial.print("> [MQTT] Connecting...");
+    String onlineTopic = "esp/esp8266-";
+    onlineTopic += getUniqueID();
+    onlineTopic += "/status";
+    if (mqttClient.connect(clientId.c_str()))
+    {
+      Serial.println(" OK");
+      client.publish(onlineTopic.c_str(), "online");
+    }
+    else
+    {
+      Serial.print(" failed, rc=");
+      Serial.println(client.state());
+      delay(5000);
+    }
   }
-  Serial.println(" OK");
 }
 #endif
 
@@ -130,6 +140,12 @@ void setup()
 #endif
 #if defined(ESP8266)
   connectToWiFi();
+  mqttClient.setServer(mqtt_server, mqtt_port);
+  String lastWillTopic = "esp/esp8266-";
+  lastWillTopic += getUniqueID();
+  lastWillTopic += "/lastwill";
+  mqttClient.setWill(lastWillTopic, "offline", 0, true);
+
   if (WiFi.status() == WL_CONNECTED)
   {
     connectToMqtt(getUniqueID());
