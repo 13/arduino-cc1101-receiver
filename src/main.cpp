@@ -265,7 +265,7 @@ void loop()
       DynamicJsonDocument doc(1024);
 
       // Split the input string into key-value pairs using comma separator
-      int pos = 0;
+      uint8_t pos = 0;
       while (pos < input_str.length())
       {
         int sep_pos = input_str.indexOf(',', pos);
