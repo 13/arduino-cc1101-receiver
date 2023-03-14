@@ -2,9 +2,11 @@
 #if defined(ESP8266)
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
-#include <ESP8266WebServer.h>
 #include <ArduinoJson.h>
 #include <PubSubClient.h>
+#include <ESPAsyncTCP.h>
+#include <ESPAsyncWebServer.h>
+#include <FS.h>
 #else
 #include <EEPROM.h>
 #endif
@@ -16,6 +18,20 @@
 #if defined(ESP8266)
 WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient);
+AsyncWebServer server(80);
+
+String getIP() {
+  return String(WiFi.localIP().toString());
+}
+
+// Replaces placeholder with LED state value
+String processor(const String& var){
+  Serial.println(var);
+  if (var == "IP"){
+    return getIP();
+  }
+  return String();
+}
 
 void connectToWiFi()
 {
@@ -146,6 +162,12 @@ void setup()
   Serial.println();
 #endif
 #if defined(ESP8266)
+  // Initialize SPIFFS
+  if (!SPIFFS.begin())
+  {
+    Serial.println(F("> [SPIFFS] ERROR "));
+    return;
+  }
   connectToWiFi();
   mqttClient.setServer(mqtt_server, mqtt_port);
   if (WiFi.status() == WL_CONNECTED)
@@ -180,6 +202,24 @@ void setup()
     while (true)
       ;
   }
+  #if defined(ESP8266)
+  // Route for root / web page
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(SPIFFS, "/index.html", String(), false, processor);
+  });
+  
+  // Route to load style.css file
+  server.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(SPIFFS, "/style.css", "text/css");
+  });
+
+  server.on("/IP", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send_P(200, "text/plain", getIP().c_str());
+  });
+
+  // Start server
+  server.begin();
+  #endif
 }
 
 void loop()
