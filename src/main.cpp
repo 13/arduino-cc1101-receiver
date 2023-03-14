@@ -68,13 +68,13 @@ void connectToMqtt(String uid)
     if (mqttClient.connect(clientId.c_str(), lastWillTopic.c_str(), 1, true, "offline"))
     {
       Serial.println(" OK");
-      mqttClient.publish(lastWillTopic.c_str(), "online");
+      mqttClient.publish(lastWillTopic.c_str(), "online", true);
     }
     else
     {
       Serial.print(" failed, rc=");
       Serial.println(mqttClient.state());
-      delay(5000);
+      delay(2000);
     }
   }
 }

@@ -9,8 +9,8 @@
 <body>
   <h1>ESP8266 Web Server</h1>
   <p>
-    <span class="sensor-labels">Temperature</span>
-    <span id="temperature">%TEMPERATURE%</span>
+    <span class="sensor-labels">IP: </span>
+    <span id="getip"></span>
     <sup class="units">&deg;C</sup>
   </p>
 </body>
@@ -19,7 +19,7 @@
     var xhttp = new XMLHttpRequest();
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
-        document.getElementById("temperature").innerHTML = this.responseText;
+        document.getElementById("getip").innerHTML = this.responseText;
       }
     };
     xhttp.open("GET", "/IP", true);
