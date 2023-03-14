@@ -47,7 +47,7 @@ void connectToMqtt(String uid)
     clientId += uid;
     String lastWillTopic = "esp/";
     lastWillTopic += clientId;
-    lastWillTopic += "/status";
+    lastWillTopic += "/LWT";
 
     if (mqttClient.connect(clientId.c_str(), lastWillTopic.c_str(), 1, true, "offline"))
     {
