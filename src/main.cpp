@@ -20,14 +20,17 @@ WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient);
 AsyncWebServer server(80);
 
-String getIP() {
+String getIP()
+{
   return String(WiFi.localIP().toString());
 }
 
 // Replaces placeholder with LED state value
-String processor(const String& var){
+String processor(const String &var)
+{
   Serial.println(var);
-  if (var == "IP"){
+  if (var == "IP")
+  {
     return getIP();
   }
   return String();
@@ -102,13 +105,33 @@ void printMARK()
   }
   if (countMsg == UINT32_MAX)
   {
-    countMsg = 0;
+    countMsg = 1;
   }
   if (millis() - lastMillis >= INTERVAL_1MIN)
   {
     Serial.print(F("> [MARK] Uptime: "));
-    Serial.print(countMsg);
-    Serial.println(F(" min"));
+
+    if (countMsg >= 60)
+    {
+      int hours = countMsg / 60;
+      int remMins = countMsg % 60;
+      if (hours >= 24)
+      {
+        int days = hours / 24;
+        hours = hours % 24;
+        Serial.print(days);
+        Serial.print(F("d "));
+      }
+      Serial.print(hours);
+      Serial.print(F("h "));
+      Serial.print(remMins);
+      Serial.println(F("m"));
+    }
+    else
+    {
+      Serial.print(countMsg);
+      Serial.println(F("m"));
+    }
     countMsg++;
     lastMillis += INTERVAL_1MIN;
   }
@@ -202,24 +225,21 @@ void setup()
     while (true)
       ;
   }
-  #if defined(ESP8266)
+#if defined(ESP8266)
   // Route for root / web page
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(SPIFFS, "/index.html", String(), false, processor);
-  });
-  
-  // Route to load style.css file
-  server.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(SPIFFS, "/style.css", "text/css");
-  });
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
+            { request->send(SPIFFS, "/index.html", String(), false, processor); });
 
-  server.on("/IP", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send_P(200, "text/plain", getIP().c_str());
-  });
+  // Route to load style.css file
+  server.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *request)
+            { request->send(SPIFFS, "/style.css", "text/css"); });
+
+  server.on("/IP", HTTP_GET, [](AsyncWebServerRequest *request)
+            { request->send_P(200, "text/plain", getIP().c_str()); });
 
   // Start server
   server.begin();
-  #endif
+#endif
 }
 
 void loop()
