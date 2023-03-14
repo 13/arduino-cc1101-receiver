@@ -340,6 +340,7 @@ void loop()
       // serializeJsonPretty(doc, Serial);
       String jsonStr;
       serializeJson(doc, jsonStr);
+      Serial.println(jsonStr);
       String topic = String(mqtt_topic) + "/" + String(doc["N"].as<String>()) + "/json";
       if (!mqttClient.connected())
       {
