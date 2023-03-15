@@ -40,11 +40,7 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
   if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT)
   {
     data[len] = 0;
-    if (strcmp((char *)data, "toggle") == 0)
-    {
-      // ledState = !ledState;
-      notifyClients();
-    }
+    notifyClients();
   }
 }
 
@@ -55,6 +51,7 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
   {
   case WS_EVT_CONNECT:
     Serial.printf("> [WebSocket] Client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
+    notifyClients();
     break;
   case WS_EVT_DISCONNECT:
     Serial.printf("> [WebSocket] Client #%u disconnected\n", client->id());
@@ -229,12 +226,12 @@ void setup()
   Serial.println(getUniqueID());
 #ifdef VERBOSE
   Serial.print(("> Mode: "));
-#ifdef GD0
-  Serial.print(F("GD0 "));
-#endif
   Serial.print(F("VERBOSE "));
 #ifdef DEBUG
-  Serial.print(F("DEBUG"));
+  Serial.print(F("DEBUG "));
+#endif
+#ifdef GD0
+  Serial.print(F("GD0"));
 #endif
   Serial.println();
 #endif

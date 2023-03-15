@@ -25,7 +25,7 @@
                     <td class="text-right"><span id="getIp"></span></td>
                   </tr>
                   <tr>
-                    <th><span class="labelIp">MQTT: </span></th>
+                    <th><span class="labelMqtt">MQTT: </span></th>
                     <td class="text-right"><span id="getMqtt"></span></td>
                   </tr>
                 </tbody>
@@ -40,18 +40,6 @@
       crossorigin="anonymous"
     ></script>
   </body>
-  <script>
-    setInterval(function () {
-      var xhttp = new XMLHttpRequest();
-      xhttp.onreadystatechange = function () {
-        if (this.readyState == 4 && this.status == 200) {
-          document.getElementById("getIp").innerHTML = this.responseText;
-        }
-      };
-      xhttp.open("GET", "/ip", true);
-      xhttp.send();
-    }, 10000);
-  </script>
   <script>
     var gateway = `ws://${window.location.hostname}/ws`;
     var websocket;
@@ -72,10 +60,8 @@
       setTimeout(initWebSocket, 2000);
     }
     function onMessage(event) {
-      var state;
-      // if (event.data == "1"){
-      document.getElementById("getMqtt").innerHTML = event.data;
-      console.log('getMqtt' + event.data);
+      document.getElementById("getIp").innerHTML = event.data;
+      console.log('getIp: ' + event.data);
     }
     window.addEventListener('load', onLoad);
     function onLoad(event) {
