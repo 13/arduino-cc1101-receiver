@@ -19,6 +19,7 @@
 WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient);
 AsyncWebServer server(80);
+long mqttLastReconnectAttempt = 0;
 
 String getIP()
 {
@@ -56,18 +57,16 @@ void connectToWiFi()
     Serial.println(WiFi.localIP().toString());
   }
 }
-void connectToMqtt(String uid)
+boolean connectToMqtt(String uid)
 {
-  while (!mqttClient.connected())
+  String clientId = "esp8266-";
+  clientId += uid;
+  String lastWillTopic = "esp/";
+  lastWillTopic += clientId;
+  lastWillTopic += "/LWT";
+  if (!mqttClient.connected())
   {
     Serial.print("> [MQTT] Connecting...");
-
-    String clientId = "esp8266-";
-    clientId += uid;
-    String lastWillTopic = "esp/";
-    lastWillTopic += clientId;
-    lastWillTopic += "/LWT";
-
     if (mqttClient.connect(clientId.c_str(), lastWillTopic.c_str(), 1, true, "offline"))
     {
       Serial.println(" OK");
@@ -77,14 +76,38 @@ void connectToMqtt(String uid)
     {
       Serial.print(" failed, rc=");
       Serial.println(mqttClient.state());
-      delay(2000);
     }
   }
+  else
+  {
+    mqttClient.publish(lastWillTopic.c_str(), "online", true);
+  }
+  return mqttClient.connected();
 }
 #endif
 
 // cc1101
 const uint8_t byteArrSize = 61;
+
+// Last 4 digits of ChipID
+String getUniqueID()
+{
+  String uid = "0";
+#if defined(ESP8266)
+  uid = WiFi.macAddress().substring(12);
+  uid.replace(":", "");
+#else
+  // read EEPROM serial number
+  int address = 13;
+  int serialNumber;
+  if (EEPROM.read(address) != 255)
+  {
+    EEPROM.get(address, serialNumber);
+    uid = String(serialNumber, HEX);
+  }
+#endif
+  return uid;
+}
 
 #ifdef VERBOSE
 // one minute mark
@@ -134,30 +157,13 @@ void printMARK()
     }
     countMsg++;
     lastMillis += INTERVAL_1MIN;
-  }
-}
-#endif
-
-// Last 4 digits of ChipID
-String getUniqueID()
-{
-  String uid = "0";
-
 #if defined(ESP8266)
-  uid = WiFi.macAddress().substring(12);
-  uid.replace(":", "");
-#else
-  // read EEPROM serial number
-  int address = 13;
-  int serialNumber;
-  if (EEPROM.read(address) != 255)
-  {
-    EEPROM.get(address, serialNumber);
-    uid = String(serialNumber, HEX);
-  }
+    // 1 minute status update
+    connectToMqtt(getUniqueID());
 #endif
-  return uid;
+  }
 }
+#endif
 
 void setup()
 {
@@ -229,10 +235,10 @@ void setup()
   // Route for root / web page
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send(SPIFFS, "/index.html", String(), false, processor); });
-
-  // Route to load style.css file
-  server.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send(SPIFFS, "/style.css", "text/css"); });
+  server.on("/css/bootstrap.min.css", HTTP_GET, [](AsyncWebServerRequest *request)
+            { request->send(SPIFFS, "/css/bootstrap.min.css", "text/css"); });
+  server.on("/js/bootstrap.bundle.min.js", HTTP_GET, [](AsyncWebServerRequest *request)
+            { request->send(SPIFFS, "/css/bootstrap.bundle.min.js", "text/javascript"); });
 
   server.on("/IP", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send_P(200, "text/plain", getIP().c_str()); });
@@ -251,9 +257,21 @@ void loop()
   }
   if (!mqttClient.connected())
   {
-    connectToMqtt(getUniqueID());
+    long mqttNow = millis();
+    if (mqttNow - mqttLastReconnectAttempt > 5000)
+    {
+      mqttLastReconnectAttempt = mqttNow;
+      // Attempt to reconnect
+      if (connectToMqtt(getUniqueID()))
+      {
+        mqttLastReconnectAttempt = 0;
+      }
+    }
   }
-  mqttClient.loop();
+  else
+  {
+    mqttClient.loop();
+  }
 #endif
 #ifdef MARK
   printMARK();
