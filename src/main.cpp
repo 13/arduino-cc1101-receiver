@@ -21,11 +21,54 @@
 WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient);
 AsyncWebServer server(80);
+AsyncWebSocket ws("/ws");
 long mqttLastReconnectAttempt = 0;
 
 String getIP()
 {
   return String(WiFi.localIP().toString());
+}
+
+void notifyClients()
+{
+  ws.textAll(getIP());
+}
+
+void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
+  AwsFrameInfo *info = (AwsFrameInfo*)arg;
+  if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
+    data[len] = 0;
+    if (strcmp((char*)data, "toggle") == 0) {
+      // ledState = !ledState;
+      notifyClients();
+    }
+  }
+}
+
+void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type,
+             void *arg, uint8_t *data, size_t len)
+{
+  switch (type)
+  {
+  case WS_EVT_CONNECT:
+    Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
+    break;
+  case WS_EVT_DISCONNECT:
+    Serial.printf("WebSocket client #%u disconnected\n", client->id());
+    break;
+  case WS_EVT_DATA:
+    handleWebSocketMessage(arg, data, len);
+    break;
+  case WS_EVT_PONG:
+  case WS_EVT_ERROR:
+    break;
+  }
+}
+
+void initWebSocket()
+{
+  ws.onEvent(onEvent);
+  server.addHandler(&ws);
 }
 
 // Replaces placeholder with LED state value
@@ -234,14 +277,21 @@ void setup()
       ;
   }
 #if defined(ESP8266)
+  initWebSocket();
   // Route for root / web page
+  //server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
+  //          { request->send_P(200, "text/html", index_html, processor); });
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send(LittleFS, "/index.html", String(), false, processor); });
+  
+  //server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
+  //          { request->send(LittleFS, "/index.html", String(), false, processor); });
   server.on("/css/bootstrap.min.css", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send(LittleFS, "/css/bootstrap.min.css", "text/css"); });
   server.on("/js/bootstrap.bundle.min.js", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send(LittleFS, "/css/bootstrap.bundle.min.js", "text/javascript"); });
-
+  server.on("/favicon.ico", HTTP_GET, [](AsyncWebServerRequest *request)
+            { request->send(LittleFS, "/favicon.ico", "image/x-icon"); });
   server.on("/IP", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send_P(200, "text/plain", getIP().c_str()); });
 
@@ -253,6 +303,7 @@ void setup()
 void loop()
 {
 #if defined(ESP8266)
+  ws.cleanupClients();
   if (WiFi.status() != WL_CONNECTED)
   {
     connectToWiFi();
