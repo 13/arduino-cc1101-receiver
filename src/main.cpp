@@ -34,11 +34,14 @@ void notifyClients()
   ws.textAll(getIP());
 }
 
-void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
-  AwsFrameInfo *info = (AwsFrameInfo*)arg;
-  if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
+void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
+{
+  AwsFrameInfo *info = (AwsFrameInfo *)arg;
+  if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT)
+  {
     data[len] = 0;
-    if (strcmp((char*)data, "toggle") == 0) {
+    if (strcmp((char *)data, "toggle") == 0)
+    {
       // ledState = !ledState;
       notifyClients();
     }
@@ -51,10 +54,10 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
   switch (type)
   {
   case WS_EVT_CONNECT:
-    Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
+    Serial.printf("> [WebSocket] Client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
     break;
   case WS_EVT_DISCONNECT:
-    Serial.printf("WebSocket client #%u disconnected\n", client->id());
+    Serial.printf("> [WebSocket] Client #%u disconnected\n", client->id());
     break;
   case WS_EVT_DATA:
     handleWebSocketMessage(arg, data, len);
@@ -279,13 +282,13 @@ void setup()
 #if defined(ESP8266)
   initWebSocket();
   // Route for root / web page
-  //server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
+  // server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
   //          { request->send_P(200, "text/html", index_html, processor); });
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send(LittleFS, "/index.html", String(), false, processor); });
-  
-  //server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
-  //          { request->send(LittleFS, "/index.html", String(), false, processor); });
+
+  // server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
+  //           { request->send(LittleFS, "/index.html", String(), false, processor); });
   server.on("/css/bootstrap.min.css", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send(LittleFS, "/css/bootstrap.min.css", "text/css"); });
   server.on("/js/bootstrap.bundle.min.js", HTTP_GET, [](AsyncWebServerRequest *request)
