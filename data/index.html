@@ -7,7 +7,6 @@
     <link
       href="css/bootstrap.min.css"
       rel="stylesheet"
-      integrity="sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD"
       crossorigin="anonymous"
     />
     <link rel="icon" type="image/x-icon" href="favicon.ico">
@@ -23,7 +22,7 @@
                 <tbody>
                   <tr>
                     <th><span class="labelIp">IP: </span></th>
-                    <td class="text-right"><span id="getip"></span></td>
+                    <td class="text-right"><span id="getIp"></span></td>
                   </tr>
                   <tr>
                     <th><span class="labelIp">MQTT: </span></th>
@@ -38,7 +37,6 @@
     </div>
     <script
       src="js/bootstrap.bundle.min.js"
-      integrity="sha384-w76AqPfDkMBDXo30jS1Sgez6pr3x5MlQ1ZAGC+nuZB+EYdgRZgiwxhTBTkF7CXvN"
       crossorigin="anonymous"
     ></script>
   </body>
@@ -47,10 +45,10 @@
       var xhttp = new XMLHttpRequest();
       xhttp.onreadystatechange = function () {
         if (this.readyState == 4 && this.status == 200) {
-          document.getElementById("getip").innerHTML = this.responseText;
+          document.getElementById("getIp").innerHTML = this.responseText;
         }
       };
-      xhttp.open("GET", "/IP", true);
+      xhttp.open("GET", "/ip", true);
       xhttp.send();
     }, 10000);
   </script>
@@ -66,6 +64,7 @@
     }
     function onOpen(event) {
       console.log('Connection opened');
+      console.log('event: ' + event);
     }
   
     function onClose(event) {
@@ -75,19 +74,12 @@
     function onMessage(event) {
       var state;
       // if (event.data == "1"){
-      document.getElementById("getMqtt").innerHTML =event.data;
+      document.getElementById("getMqtt").innerHTML = event.data;
+      console.log('getMqtt' + event.data);
     }
     window.addEventListener('load', onLoad);
     function onLoad(event) {
       initWebSocket();
-      initButton();
-    }
-  
-    function initButton() {
-      document.getElementById('button').addEventListener('click', toggle);
-    }
-    function toggle(){
-      websocket.send('toggle');
     }
   </script>
 </html>

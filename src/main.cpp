@@ -78,7 +78,7 @@ void initWebSocket()
 String processor(const String &var)
 {
   Serial.println(var);
-  if (var == "IP")
+  if (var == "ip")
   {
     return getIP();
   }
@@ -292,10 +292,10 @@ void setup()
   server.on("/css/bootstrap.min.css", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send(LittleFS, "/css/bootstrap.min.css", "text/css"); });
   server.on("/js/bootstrap.bundle.min.js", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send(LittleFS, "/css/bootstrap.bundle.min.js", "text/javascript"); });
+            { request->send(LittleFS, "/js/bootstrap.bundle.min.js", "text/javascript"); });
   server.on("/favicon.ico", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send(LittleFS, "/favicon.ico", "image/x-icon"); });
-  server.on("/IP", HTTP_GET, [](AsyncWebServerRequest *request)
+  server.on("/ip", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send_P(200, "text/plain", getIP().c_str()); });
 
   // Start server
