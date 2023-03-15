@@ -7,6 +7,8 @@
 #include <ESPAsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include <FS.h>
+#define SPIFFS LittleFS
+#include <LittleFS.h>
 #else
 #include <EEPROM.h>
 #endif
@@ -191,10 +193,10 @@ void setup()
   Serial.println();
 #endif
 #if defined(ESP8266)
-  // Initialize SPIFFS
-  if (!SPIFFS.begin())
+  // Initialize LittleFS
+  if (!LittleFS.begin())
   {
-    Serial.println(F("> [SPIFFS] ERROR "));
+    Serial.println(F("> [LittleFS] ERROR "));
     return;
   }
   connectToWiFi();
@@ -234,11 +236,11 @@ void setup()
 #if defined(ESP8266)
   // Route for root / web page
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send(SPIFFS, "/index.html", String(), false, processor); });
+            { request->send(LittleFS, "/index.html", String(), false, processor); });
   server.on("/css/bootstrap.min.css", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send(SPIFFS, "/css/bootstrap.min.css", "text/css"); });
+            { request->send(LittleFS, "/css/bootstrap.min.css", "text/css"); });
   server.on("/js/bootstrap.bundle.min.js", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send(SPIFFS, "/css/bootstrap.bundle.min.js", "text/javascript"); });
+            { request->send(LittleFS, "/css/bootstrap.bundle.min.js", "text/javascript"); });
 
   server.on("/IP", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send_P(200, "text/plain", getIP().c_str()); });
