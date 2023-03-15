@@ -23,6 +23,7 @@ PubSubClient mqttClient(wifiClient);
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 long mqttLastReconnectAttempt = 0;
+DynamicJsonDocument jsonDoc(200);
 
 String getIP()
 {
