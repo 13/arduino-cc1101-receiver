@@ -9,7 +9,7 @@
 #include <FS.h>
 #define SPIFFS LittleFS
 #include <LittleFS.h>
-// #include <WebSerial.h>
+#include <WebSerial.h>
 #else
 #include <EEPROM.h>
 #endif
@@ -125,7 +125,7 @@ void connectToWiFi()
     jsonDoc["wifi"]["hostname"] = WiFi.hostname();
   }
 }
-boolean connectToMqtt(String uid)
+boolean connectToMqtt()
 {
 
   String lastWillTopic = "esp/";
@@ -150,20 +150,20 @@ boolean connectToMqtt(String uid)
   {
     mqttClient.publish(lastWillTopic.c_str(), "online", true);
   }
-  //// WebSerial.print("MQTT: ");
-  //// WebSerial.println(mqttClient.connected());
+  // WebSerial.print("MQTT: ");
+  // WebSerial.println(mqttClient.connected());
   return mqttClient.connected();
 }
 
 void recvMsg(uint8_t *data, size_t len)
 {
-  // WebSerial.println("Received Data...");
+  WebSerial.println("Received Data...");
   String d = "";
   for (int i = 0; i < len; i++)
   {
     d += char(data[i]);
   }
-  // WebSerial.println(d);
+  WebSerial.println(d);
 }
 #endif
 
@@ -240,7 +240,7 @@ void printMARK()
     lastMillis += INTERVAL_1MIN;
 #if defined(ESP8266)
     // 1 minute status update
-    connectToMqtt(getUniqueID());
+    connectToMqtt();
 #endif
   }
 }
@@ -285,7 +285,7 @@ void setup()
   mqttClient.setServer(mqtt_server, mqtt_port);
   if (WiFi.status() == WL_CONNECTED)
   {
-    connectToMqtt(getUniqueID());
+    connectToMqtt();
   }
 #endif
   // Start CC1101
@@ -338,9 +338,9 @@ void setup()
               request->send(200, "application/json", jsonString); });
   server.on("/jsonx", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send(200, "application/json", wsSerializeJson(jsonDoc)); });
-  // // WebSerial is accessible at "<IP Address>/// WebSerial" in browser
-  // WebSerial.begin(&server);
-  // WebSerial.msgCallback(recvMsg);
+  // WebSerial
+  WebSerial.begin(&server);
+  WebSerial.msgCallback(recvMsg);
   // Start server
   server.begin();
 #endif
@@ -356,12 +356,13 @@ void loop()
   }
   if (!mqttClient.connected())
   {
+    WebSerial.println("> [MQTT] Not connected loop");
     long mqttNow = millis();
     if (mqttNow - mqttLastReconnectAttempt > 5000)
     {
       mqttLastReconnectAttempt = mqttNow;
       // Attempt to reconnect
-      if (connectToMqtt(getUniqueID()))
+      if (connectToMqtt())
       {
         mqttLastReconnectAttempt = 0;
       }
@@ -473,30 +474,28 @@ void loop()
         pos = sep_pos + 1;
       }
       doc.remove("Z");
-      // Print the JSON object to the serial monitor
-      // serializeJsonPretty(doc, Serial);
+
       String jsonStr;
       serializeJson(doc, jsonStr);
       Serial.println(jsonStr);
-      // WebSerial.println(jsonStr);
-      // cc1101Array.add(jsonStr);
+      WebSerial.println(jsonStr);
       String topic = String(mqtt_topic) + "/" + String(doc["N"].as<String>()) + "/json";
       if (!mqttClient.connected())
       {
         Serial.println("> [MQTT] Not connected");
-        // WebSerial.println("> [MQTT] Not connected");
-        connectToMqtt(getUniqueID());
+        WebSerial.println("> [MQTT] Not connected");
+        connectToMqtt();
       }
       bool published = mqttClient.publish(topic.c_str(), jsonStr.c_str(), true);
       if (published)
       {
         Serial.println("> [MQTT] Message published");
-        // WebSerial.println("> [MQTT] Message published");
+        WebSerial.println("> [MQTT] Message published");
       }
       else
       {
         Serial.println("> [MQTT] Failed to publish message");
-        // WebSerial.println("> [MQTT] Failed to publish message");
+        WebSerial.println("> [MQTT] Failed to publish message");
       }
 #endif
 #ifdef VERBOSE_FW
