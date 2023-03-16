@@ -9,6 +9,7 @@
 #include <FS.h>
 #define SPIFFS LittleFS
 #include <LittleFS.h>
+#include <WebSerial.h>
 #else
 #include <EEPROM.h>
 #endif
@@ -24,6 +25,7 @@ AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 long mqttLastReconnectAttempt = 0;
 DynamicJsonDocument jsonDoc(200);
+JsonArray cc1101Array = jsonDoc.createNestedArray("cc1101");
 
 String getIP()
 {
@@ -32,7 +34,8 @@ String getIP()
 
 void notifyClients()
 {
-  ws.textAll(getIP());
+  // ws.textAll(getIP());
+  ws.textAll(jsonDoc);
 }
 
 void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
@@ -101,12 +104,13 @@ void connectToWiFi()
   {
     Serial.print("> [WiFi] IP: ");
     Serial.println(WiFi.localIP().toString());
+    jsonDoc["wifi"]["ip"] = WiFi.localIP().c_str();
+    jsonDoc["wifi"]["mac"] = WiFi.macAddress().c_str();
+    jsonDoc["wifi"]["ssid"] = WiFi.SSID().c_str();
   }
 }
 boolean connectToMqtt(String uid)
 {
-  String clientId = "esp8266-";
-  clientId += uid;
   String lastWillTopic = "esp/";
   lastWillTopic += clientId;
   lastWillTopic += "/LWT";
@@ -128,6 +132,8 @@ boolean connectToMqtt(String uid)
   {
     mqttClient.publish(lastWillTopic.c_str(), "online", true);
   }
+  WebSerial.print("MQTT: ");
+  WebSerial.println(mqttClient.connected());
   return mqttClient.connected();
 }
 #endif
@@ -209,6 +215,11 @@ void printMARK()
 #endif
   }
 }
+#endif
+
+#if defined(ESP8266)
+String clientId = "esp8266-";
+clientId += uid;
 #endif
 
 void setup()
@@ -295,7 +306,9 @@ void setup()
             { request->send(LittleFS, "/favicon.ico", "image/x-icon"); });
   server.on("/ip", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send_P(200, "text/plain", getIP().c_str()); });
-
+  // WebSerial is accessible at "<IP Address>/webserial" in browser
+  WebSerial.begin(&server);
+  WebSerial.msgCallback(recvMsg);
   // Start server
   server.begin();
 #endif
@@ -433,6 +446,8 @@ void loop()
       String jsonStr;
       serializeJson(doc, jsonStr);
       Serial.println(jsonStr);
+      WebSerial.println(jsonStr);
+      cc1101Array.add(jsonStr);
       String topic = String(mqtt_topic) + "/" + String(doc["N"].as<String>()) + "/json";
       if (!mqttClient.connected())
       {
