@@ -27,6 +27,8 @@ long mqttLastReconnectAttempt = 0;
 DynamicJsonDocument jsonDoc(200);
 JsonArray cc1101Array = jsonDoc.createNestedArray("cc1101");
 
+String clientId = "esp8266-";
+
 String getIP()
 {
   return String(WiFi.localIP().toString());
@@ -34,8 +36,10 @@ String getIP()
 
 void notifyClients()
 {
+  String jsonStringX;
+  serializeJson(jsonDoc, jsonStringX);
   // ws.textAll(getIP());
-  ws.textAll(jsonDoc);
+  ws.textAll(jsonStringX);
 }
 
 void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
@@ -104,13 +108,14 @@ void connectToWiFi()
   {
     Serial.print("> [WiFi] IP: ");
     Serial.println(WiFi.localIP().toString());
-    jsonDoc["wifi"]["ip"] = WiFi.localIP().c_str();
+    jsonDoc["wifi"]["ip"] = WiFi.localIP().toString();
     jsonDoc["wifi"]["mac"] = WiFi.macAddress().c_str();
     jsonDoc["wifi"]["ssid"] = WiFi.SSID().c_str();
   }
 }
 boolean connectToMqtt(String uid)
 {
+  clientId += uid;
   String lastWillTopic = "esp/";
   lastWillTopic += clientId;
   lastWillTopic += "/LWT";
@@ -135,6 +140,17 @@ boolean connectToMqtt(String uid)
   WebSerial.print("MQTT: ");
   WebSerial.println(mqttClient.connected());
   return mqttClient.connected();
+}
+
+void recvMsg(uint8_t *data, size_t len)
+{
+  WebSerial.println("Received Data...");
+  String d = "";
+  for (int i = 0; i < len; i++)
+  {
+    d += char(data[i]);
+  }
+  WebSerial.println(d);
 }
 #endif
 
@@ -215,11 +231,6 @@ void printMARK()
 #endif
   }
 }
-#endif
-
-#if defined(ESP8266)
-String clientId = "esp8266-";
-clientId += uid;
 #endif
 
 void setup()
