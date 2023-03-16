@@ -463,16 +463,19 @@ void loop()
       if (!mqttClient.connected())
       {
         Serial.println("> [MQTT] Not connected");
+        WebSerial.println("> [MQTT] Not connected");
         connectToMqtt(getUniqueID());
       }
       bool published = mqttClient.publish(topic.c_str(), jsonStr.c_str(), true);
       if (published)
       {
         Serial.println("> [MQTT] Message published");
+        WebSerial.println("> [MQTT] Message published");
       }
       else
       {
         Serial.println("> [MQTT] Failed to publish message");
+        WebSerial.println("> [MQTT] Failed to publish message");
       }
 #endif
 #ifdef VERBOSE_FW
