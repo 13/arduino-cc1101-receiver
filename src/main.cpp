@@ -9,7 +9,7 @@
 #include <FS.h>
 #define SPIFFS LittleFS
 #include <LittleFS.h>
-#include <WebSerial.h>
+// #include <WebSerial.h>
 #else
 #include <EEPROM.h>
 #endif
@@ -25,9 +25,17 @@ AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 long mqttLastReconnectAttempt = 0;
 DynamicJsonDocument jsonDoc(200);
-JsonArray cc1101Array = jsonDoc.createNestedArray("cc1101");
+// JsonArray cc1101Array = jsonDoc.createNestedArray("cc1101");
 
-String clientId = "esp8266-";
+String hostname = "esp8266-";
+
+String wsSerializeJson(DynamicJsonDocument jDoc)
+{
+  String jsonString;
+  jDoc["wifi"]["rssi"] = WiFi.RSSI();
+  serializeJson(jDoc, jsonString);
+  return jsonString;
+}
 
 String getIP()
 {
@@ -36,10 +44,11 @@ String getIP()
 
 void notifyClients()
 {
-  String jsonStringX;
-  serializeJson(jsonDoc, jsonStringX);
+  // String jsonStringX;
+  // serializeJson(jsonDoc, jsonStringX);
   // ws.textAll(getIP());
-  ws.textAll(jsonStringX);
+  // ws.textAll(jsonStringX);
+  ws.textAll(wsSerializeJson(jsonDoc));
 }
 
 void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
@@ -96,6 +105,7 @@ void connectToWiFi()
   WiFi.mode(WIFI_STA); // switch off AP
   WiFi.setAutoConnect(true);
   WiFi.setAutoReconnect(true);
+  WiFi.hostname(hostname);
   WiFi.begin(wifi_ssid, wifi_pass);
   Serial.print("> [WiFi] Connecting...");
   while (WiFi.status() != WL_CONNECTED)
@@ -109,21 +119,23 @@ void connectToWiFi()
     Serial.print("> [WiFi] IP: ");
     Serial.println(WiFi.localIP().toString());
     jsonDoc["wifi"]["ip"] = WiFi.localIP().toString();
-    jsonDoc["wifi"]["mac"] = WiFi.macAddress().c_str();
-    jsonDoc["wifi"]["ssid"] = WiFi.SSID().c_str();
+    jsonDoc["wifi"]["mac"] = WiFi.macAddress();
+    jsonDoc["wifi"]["ssid"] = WiFi.SSID();
+    jsonDoc["wifi"]["rssi"] = WiFi.RSSI();
+    jsonDoc["wifi"]["hostname"] = WiFi.hostname();
   }
 }
 boolean connectToMqtt(String uid)
 {
-  clientId += uid;
+
   String lastWillTopic = "esp/";
-  lastWillTopic += clientId;
+  lastWillTopic += hostname;
   lastWillTopic += "/LWT";
-  jsonDoc["hostname"] = clientId;
+
   if (!mqttClient.connected())
   {
     Serial.print("> [MQTT] Connecting...");
-    if (mqttClient.connect(clientId.c_str(), lastWillTopic.c_str(), 1, true, "offline"))
+    if (mqttClient.connect(hostname.c_str(), lastWillTopic.c_str(), 1, true, "offline"))
     {
       Serial.println(" OK");
       mqttClient.publish(lastWillTopic.c_str(), "online", true);
@@ -138,20 +150,20 @@ boolean connectToMqtt(String uid)
   {
     mqttClient.publish(lastWillTopic.c_str(), "online", true);
   }
-  WebSerial.print("MQTT: ");
-  WebSerial.println(mqttClient.connected());
+  //// WebSerial.print("MQTT: ");
+  //// WebSerial.println(mqttClient.connected());
   return mqttClient.connected();
 }
 
 void recvMsg(uint8_t *data, size_t len)
 {
-  WebSerial.println("Received Data...");
+  // WebSerial.println("Received Data...");
   String d = "";
   for (int i = 0; i < len; i++)
   {
     d += char(data[i]);
   }
-  WebSerial.println(d);
+  // WebSerial.println(d);
 }
 #endif
 
@@ -248,6 +260,9 @@ void setup()
   Serial.println(GIT_VERSION);
   Serial.print(F("> Node ID: "));
   Serial.println(getUniqueID());
+#if defined(ESP8266)
+  hostname += getUniqueID();
+#endif
 #ifdef VERBOSE
   Serial.print(("> Mode: "));
   Serial.print(F("VERBOSE "));
@@ -318,9 +333,14 @@ void setup()
             { request->send(LittleFS, "/favicon.ico", "image/x-icon"); });
   server.on("/ip", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send_P(200, "text/plain", getIP().c_str()); });
-  // WebSerial is accessible at "<IP Address>/webserial" in browser
-  WebSerial.begin(&server);
-  WebSerial.msgCallback(recvMsg);
+  server.on("/json", HTTP_GET, [](AsyncWebServerRequest *request)
+            { String jsonString; serializeJson(jsonDoc, jsonString);
+              request->send(200, "application/json", jsonString); });
+  server.on("/jsonx", HTTP_GET, [](AsyncWebServerRequest *request)
+            { request->send(200, "application/json", wsSerializeJson(jsonDoc)); });
+  // // WebSerial is accessible at "<IP Address>/// WebSerial" in browser
+  // WebSerial.begin(&server);
+  // WebSerial.msgCallback(recvMsg);
   // Start server
   server.begin();
 #endif
@@ -458,25 +478,25 @@ void loop()
       String jsonStr;
       serializeJson(doc, jsonStr);
       Serial.println(jsonStr);
-      WebSerial.println(jsonStr);
-      cc1101Array.add(jsonStr);
+      // WebSerial.println(jsonStr);
+      // cc1101Array.add(jsonStr);
       String topic = String(mqtt_topic) + "/" + String(doc["N"].as<String>()) + "/json";
       if (!mqttClient.connected())
       {
         Serial.println("> [MQTT] Not connected");
-        WebSerial.println("> [MQTT] Not connected");
+        // WebSerial.println("> [MQTT] Not connected");
         connectToMqtt(getUniqueID());
       }
       bool published = mqttClient.publish(topic.c_str(), jsonStr.c_str(), true);
       if (published)
       {
         Serial.println("> [MQTT] Message published");
-        WebSerial.println("> [MQTT] Message published");
+        // WebSerial.println("> [MQTT] Message published");
       }
       else
       {
         Serial.println("> [MQTT] Failed to publish message");
-        WebSerial.println("> [MQTT] Failed to publish message");
+        // WebSerial.println("> [MQTT] Failed to publish message");
       }
 #endif
 #ifdef VERBOSE_FW

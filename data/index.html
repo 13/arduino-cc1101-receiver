@@ -58,7 +58,6 @@
     }
     function onOpen(event) {
       console.log('Connection opened');
-      console.log('event: ' + event);
       var element = document.getElementById("ws-state");
       if (element.classList.contains("border-danger")){
         element.classList.remove("border-danger");
@@ -81,13 +80,13 @@
     }
     function onMessage(event) {
       const parsedData = JSON.parse(event.data);
-      console.log('getIp: ' + parsedData);
+      console.log('getIp2: ' + parsedData);
       document.getElementById("getIp").innerHTML = event.data;
       document.getElementById("getMqtt").innerHTML = parsedData.wifi.ip;
       document.getElementById("getSSID").innerHTML = parsedData.wifi.ssid;
-      document.getElementById("hostname").innerHTML = parsedData.hostname;
-      document.querySelector('title').textContent = parsedData.hostname;
-      console.log('getIp: ' + event.data);
+      document.getElementById("hostname").innerHTML = parsedData.wifi.hostname;
+      document.querySelector('title').textContent = parsedData.wifi.hostname;
+      console.log('getIp1: ' + event.data);
     }
     window.addEventListener('load', onLoad);
     function onLoad(event) {
