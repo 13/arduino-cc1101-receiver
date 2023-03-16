@@ -12,6 +12,7 @@
     <link rel="icon" type="image/x-icon" href="favicon.ico">
   </head>
   <body>
+    <hr id="ws-state" class="border border-2 opacity-50 mt-0">
     <div class="container">
       <div class="row">
         <div class="col">
@@ -32,6 +33,7 @@
               </table>
             </div>
           </div>
+          <p class="text-center small"><a href="http://192.168.22.174/webserial" class="link-secondary">WebSerial</a></p>
         </div>
       </div>
     </div>
@@ -53,10 +55,20 @@
     function onOpen(event) {
       console.log('Connection opened');
       console.log('event: ' + event);
+      var element = document.getElementById("ws-state");
+      if (element.classList.contains("border-danger")){
+        element.classList.remove("border-danger");
+      }
+      element.classList.add("border-success");
     }
   
     function onClose(event) {
       console.log('Connection closed');
+      var element = document.getElementById("ws-state");
+      if (element.classList.contains("border-success")){
+        element.classList.remove("border-success");
+      }
+      element.classList.add("border-danger");
       setTimeout(initWebSocket, 2000);
     }
     function onMessage(event) {

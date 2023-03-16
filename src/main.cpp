@@ -119,6 +119,7 @@ boolean connectToMqtt(String uid)
   String lastWillTopic = "esp/";
   lastWillTopic += clientId;
   lastWillTopic += "/LWT";
+  jsonDoc["hostname"] = clientId;
   if (!mqttClient.connected())
   {
     Serial.print("> [MQTT] Connecting...");
