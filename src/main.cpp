@@ -372,6 +372,7 @@ void loop()
   {
     mqttClient.loop();
   }
+  notifyClients();
 #endif
 #ifdef MARK
   printMARK();
