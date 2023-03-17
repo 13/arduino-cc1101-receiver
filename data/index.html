@@ -22,16 +22,16 @@
               <table class="table table-hover">
                 <tbody>
                   <tr>
-                    <th><span class="labelIp">IP: </span></th>
-                    <td class="text-end"><span id="getIp"></span></td>
-                  </tr>
-                  <tr>
                     <th><span class="labelMqtt">MQTT: </span></th>
                     <td class="text-end"><span id="getMqtt"></span></td>
                   </tr>
                   <tr>
                     <th><span class="labelMqtt">SSID: </span></th>
-                    <td class="text-end"><span id="getSSID"></span></td>
+                    <td class="text-end"><span id="ssid"></span> (<span id="rssi"></span>)</td>
+                  </tr>
+                  <tr>
+                    <th><span class="labelIp">IP: </span></th>
+                    <td class="text-end"><span id="getIp"></span></td>
                   </tr>
                 </tbody>
               </table>
@@ -80,13 +80,14 @@
     }
     function onMessage(event) {
       const parsedData = JSON.parse(event.data);
-      console.log('getIp2: ' + parsedData);
+      console.log('JSON: ' + event.data);
       document.getElementById("getIp").innerHTML = event.data;
       document.getElementById("getMqtt").innerHTML = parsedData.wifi.ip;
-      document.getElementById("getSSID").innerHTML = parsedData.wifi.ssid;
+      document.getElementById("ssid").innerHTML = parsedData.wifi.ssid;
       document.getElementById("hostname").innerHTML = parsedData.wifi.hostname;
+      document.getElementById("rssi").innerHTML = parsedData.wifi.rssi;
       document.querySelector('title').textContent = parsedData.wifi.hostname;
-      console.log('getIp1: ' + event.data);
+      
     }
     window.addEventListener('load', onLoad);
     function onLoad(event) {
