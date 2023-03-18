@@ -25,7 +25,9 @@ AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 long mqttLastReconnectAttempt = 0;
 DynamicJsonDocument wsJson(512);
-// JsonArray cc1101Array = wsJson.createNestedArray("cc1101");
+// StaticJsonDocument<512> wsJson;
+// JsonObject wsJsonObjWifi = wsJson.createNestedObject("wifi");
+// JsonObject wsJsonObjCC = wsJson.createNestedObject("cc1101");
 
 String hostname = "esp8266-";
 
@@ -40,8 +42,8 @@ String wsSerializeJson(DynamicJsonDocument djDoc)
   djDoc["wifi"]["rssi"] = WiFi.RSSI();
   djDoc["uptime"] = printUptime();
   serializeJson(djDoc, jsonStr);
-  Serial.print("> [WS] ");
-  Serial.println(jsonStr);
+  // Serial.print("> [WS] ");
+  // Serial.println(jsonStr);
   return jsonStr;
 }
 
@@ -431,7 +433,7 @@ void loop()
         // Serial.println(input_str);
 
         // Create a DynamicJsonDocument object
-        DynamicJsonDocument ccJson(512);
+        DynamicJsonDocument ccJson(256);
 
         // Split the input string into key-value pairs using comma separator
         uint8_t pos = 0;
