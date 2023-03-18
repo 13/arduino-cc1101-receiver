@@ -271,6 +271,7 @@ void setup()
 #endif
 #ifdef GD0
   Serial.print(F("GD0"));
+  Serial.print(GD0);
 #endif
   Serial.println();
 #endif
@@ -290,6 +291,7 @@ void setup()
 #endif
   // Start CC1101
   Serial.print(F("> [CC1101] Initializing... "));
+  // ELECHOUSE_cc1101.setSpiPin(SCK, MISO, MOSI, CSN);
   int cc_state = ELECHOUSE_cc1101.getCC1101();
   if (cc_state)
   {
@@ -372,7 +374,6 @@ void loop()
   {
     mqttClient.loop();
   }
-  notifyClients();
 #endif
 #ifdef MARK
   printMARK();
@@ -410,117 +411,133 @@ void loop()
 #if defined(ESP8266)
       String input_str = "";
 #endif
-      for (uint8_t i = 0; i < byteArrLen; i++)
+      if (byteArrLen > 0)
       {
-        // Filter [0-9A-Za-z,:]
-        if ((byteArr[i] >= '0' && byteArr[i] <= '9') ||
-            (byteArr[i] >= 'A' && byteArr[i] <= 'Z') ||
-            (byteArr[i] >= 'a' && byteArr[i] <= 'z') ||
-            byteArr[i] == ',' || byteArr[i] == ':' || byteArr[i] == '-')
+        for (uint8_t i = 0; i < byteArrLen; i++)
         {
-          Serial.print((char)byteArr[i]);
+          // Filter [0-9A-Za-z,:]
+          if ((byteArr[i] >= '0' && byteArr[i] <= '9') ||
+              (byteArr[i] >= 'A' && byteArr[i] <= 'Z') ||
+              (byteArr[i] >= 'a' && byteArr[i] <= 'z') ||
+              byteArr[i] == ',' || byteArr[i] == ':' || byteArr[i] == '-')
+          {
+            Serial.print((char)byteArr[i]);
 #if defined(ESP8266)
-          input_str += (char)byteArr[i];
+            input_str += (char)byteArr[i];
 #endif
+          }
         }
-      }
-      Serial.print(F(",RSSI:"));
-      Serial.print(rssi);
-      Serial.print(F(",LQI:"));
-      Serial.print(lqi);
-      Serial.print(F(",RN:"));
-      Serial.println(getUniqueID());
+        Serial.print(F(",RSSI:"));
+        Serial.print(rssi);
+        Serial.print(F(",LQI:"));
+        Serial.print(lqi);
+        Serial.print(F(",RN:"));
+        Serial.println(getUniqueID());
 #if defined(ESP8266)
-      input_str += ",RSSI:";
-      input_str += String(rssi);
-      input_str += ",LQI:";
-      input_str += String(lqi);
-      input_str += ",RN:";
-      input_str += getUniqueID();
-      // Serial.println(input_str);
+        input_str += ",RSSI:";
+        input_str += String(rssi);
+        input_str += ",LQI:";
+        input_str += String(lqi);
+        input_str += ",RN:";
+        input_str += getUniqueID();
+        // Serial.println(input_str);
 
-      // Create a DynamicJsonDocument object
-      DynamicJsonDocument doc(1024);
+        // Create a DynamicJsonDocument object
+        DynamicJsonDocument doc(1024);
 
-      // Split the input string into key-value pairs using comma separator
-      uint8_t pos = 0;
-      while (pos < input_str.length())
-      {
-        int sep_pos = input_str.indexOf(',', pos);
-        if (sep_pos == -1)
+        // Split the input string into key-value pairs using comma separator
+        uint8_t pos = 0;
+        while (pos < input_str.length())
         {
-          sep_pos = input_str.length();
+          int sep_pos = input_str.indexOf(',', pos);
+          if (sep_pos == -1)
+          {
+            sep_pos = input_str.length();
+          }
+          String pair = input_str.substring(pos, sep_pos);
+          int colon_pos = pair.indexOf(':');
+          if (colon_pos != -1)
+          {
+            String key = pair.substring(0, colon_pos);
+            String value_str = pair.substring(colon_pos + 1);
+            if (key.startsWith("N") || key.startsWith("RN") || key.startsWith("F") || key.startsWith("RF"))
+            {
+              doc[key] = value_str;
+            }
+            else if ((key.startsWith("T") || key.startsWith("H") || key.startsWith("P")) || (key.startsWith("V") && value_str.length() > 1))
+            {
+              float value = value_str.toFloat() / 10.0;
+              doc[key] = round(value * 10.0) / 10.0;
+            }
+            else
+            {
+              int value = value_str.toInt();
+              doc[key] = value;
+            }
+          }
+          pos = sep_pos + 1;
         }
-        String pair = input_str.substring(pos, sep_pos);
-        int colon_pos = pair.indexOf(':');
-        if (colon_pos != -1)
-        {
-          String key = pair.substring(0, colon_pos);
-          String value_str = pair.substring(colon_pos + 1);
-          if (key.startsWith("N") || key.startsWith("RN") || key.startsWith("F") || key.startsWith("RF"))
-          {
-            doc[key] = value_str;
-          }
-          else if ((key.startsWith("T") || key.startsWith("H") || key.startsWith("P")) || (key.startsWith("V") && value_str.length() > 1))
-          {
-            float value = value_str.toFloat() / 10.0;
-            doc[key] = round(value * 10.0) / 10.0;
-          }
-          else
-          {
-            int value = value_str.toInt();
-            doc[key] = value;
-          }
-        }
-        pos = sep_pos + 1;
-      }
-      doc.remove("Z");
+        doc.remove("Z");
 
-      String jsonStr;
-      serializeJson(doc, jsonStr);
-      Serial.println(jsonStr);
-      WebSerial.println(jsonStr);
-      String topic = String(mqtt_topic) + "/" + String(doc["N"].as<String>()) + "/json";
-      if (!mqttClient.connected())
-      {
-        Serial.println("> [MQTT] Not connected");
-        WebSerial.println("> [MQTT] Not connected");
-        connectToMqtt();
-      }
-      bool published = mqttClient.publish(topic.c_str(), jsonStr.c_str(), true);
-      if (published)
-      {
-        Serial.println("> [MQTT] Message published");
-        WebSerial.println("> [MQTT] Message published");
-      }
+        String jsonStr;
+        serializeJson(doc, jsonStr);
+        Serial.println(jsonStr);
+        WebSerial.println(jsonStr);
+        String topic = String(mqtt_topic) + "/" + String(doc["N"].as<String>()) + "/json";
+        if (!mqttClient.connected())
+        {
+          Serial.println("> [MQTT] Not connected");
+          WebSerial.println("> [MQTT] Not connected");
+          connectToMqtt();
+        }
+        bool published = mqttClient.publish(topic.c_str(), jsonStr.c_str(), true);
+        if (published)
+        {
+          Serial.println("> [MQTT] Message published");
+          WebSerial.println("> [MQTT] Message published");
+        }
+        else
+        {
+          Serial.println("> [MQTT] Failed to publish message");
+          WebSerial.println("> [MQTT] Failed to publish message");
+        }
+#endif
+      } // length 0
+#ifdef DEBUG
       else
       {
-        Serial.println("> [MQTT] Failed to publish message");
-        WebSerial.println("> [MQTT] Failed to publish message");
+        Serial.println(F("> [CC1101] Err: Size 0 "));
+        for (uint8_t i = 0; i < byteArrSize; i++)
+        {
+          Serial.print((char)byteArr[i]);
+        }
+        Serial.print(F(",RSSI:"));
+        Serial.print(rssi);
+        Serial.print(F(",LQI:"));
+        Serial.print(lqi);
+        Serial.print(F(",RN:"));
+        Serial.println(getUniqueID());
       }
 #endif
-#ifdef VERBOSE_FW
-      Serial.print(F(",RF:"));
-      Serial.println(String(GIT_VERSION_SHORT));
-#endif
-    }
-#ifdef DEBUG
+    } // check crc
+#ifdef DEBUG_CRC
     else
     {
-#ifdef DEBUG_CRC
+      Serial.print(F("CRC "));
+      int byteArrLen = ELECHOUSE_cc1101.ReceiveData(byteArr);
+      int rssi = ELECHOUSE_cc1101.getRssi();
+      int lqi = ELECHOUSE_cc1101.getLqi();
+      byteArr[byteArrLen] = '\0'; // 0, \0
+      Serial.println(F("ERR"));
+
       for (uint8_t i = 0; i < byteArrSize; i++)
       {
         Serial.print((char)byteArr[i]);
       }
       Serial.print(F(",RSSI:"));
-      Serial.print(ELECHOUSE_cc1101.getRssi());
+      Serial.print(rssi);
       Serial.print(F(",LQI:"));
-      Serial.print(ELECHOUSE_cc1101.getLqi());
-      Serial.print(F(",RN:"));
-      Serial.println(getUniqueID());
-      Serial.print(F(",RF:"));
-      Serial.println(String(GIT_VERSION_SHORT));
-#endif
+      Serial.println(lqi);
     }
 #endif
   }
