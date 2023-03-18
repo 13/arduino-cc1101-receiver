@@ -22,22 +22,22 @@
               <table class="table table-hover">
                 <tbody>
                   <tr>
-                    <th><span class="labelMqtt">MQTT: </span></th>
-                    <td class="text-end"><span id="getMqtt"></span></td>
-                  </tr>
-                  <tr>
                     <th><span class="labelMqtt">SSID: </span></th>
                     <td class="text-end"><span id="ssid"></span> (<span id="rssi"></span>)</td>
                   </tr>
                   <tr>
                     <th><span class="labelIp">IP: </span></th>
-                    <td class="text-end"><span id="getIp"></span></td>
+                    <td class="text-end"><span id="ip"></span></td>
+                  </tr>
+                  <tr>
+                    <th><span class="labelUptime">UP: </span></th>
+                    <td class="text-end"><span id="uptime"></span></td>
                   </tr>
                 </tbody>
               </table>
             </div>
           </div>
-          <p class="text-center small"><a href="http://192.168.22.174/webserial" class="link-secondary">WebSerial</a></p>
+          <p class="text-center small"><span id="cc1101"></span></p>
         </div>
       </div>
     </div>
@@ -47,6 +47,21 @@
     ></script>
   </body>
   <script>
+function formatTime(seconds) {
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+  
+  const formattedDays = days > 0 ? days + 'd ' : '';
+  const formattedHours = hours - Math.floor(hours / 24) * 24 > 0 ? hours - Math.floor(hours / 24) * 24 + 'h ' : '';
+  const formattedMinutes = minutes - Math.floor(minutes / 60) * 60 > 0 ? minutes - Math.floor(minutes / 60) * 60 + 'm ' : '';
+  const formattedSeconds = seconds - Math.floor(seconds / 60) * 60 > 0 ? seconds - Math.floor(seconds / 60) * 60 + 's' : seconds + 's';
+
+  const formattedTime = formattedDays + formattedHours + formattedMinutes + formattedSeconds;
+  
+  return formattedTime;
+}
+
     var gateway = `ws://${window.location.hostname}/ws`;
     var websocket;
     function initWebSocket() {
@@ -81,12 +96,14 @@
     function onMessage(event) {
       const parsedData = JSON.parse(event.data);
       console.log('JSON: ' + event.data);
-      document.getElementById("getIp").innerHTML = event.data;
-      document.getElementById("getMqtt").innerHTML = parsedData.wifi.ip;
-      document.getElementById("ssid").innerHTML = parsedData.wifi.ssid;
-      document.getElementById("hostname").innerHTML = parsedData.wifi.hostname;
-      document.getElementById("rssi").innerHTML = parsedData.wifi.rssi;
       document.querySelector('title').textContent = parsedData.wifi.hostname;
+      document.getElementById("hostname").innerHTML = parsedData.wifi.hostname;
+      document.getElementById("cc1101").innerHTML = JSON.stringify(parsedData.cc1101);
+      document.getElementById("ip").innerHTML = parsedData.wifi.ip;
+      document.getElementById("ssid").innerHTML = parsedData.wifi.ssid;
+      
+      document.getElementById("rssi").innerHTML = parsedData.wifi.rssi;
+      document.getElementById("uptime").innerHTML = formatTime(parsedData.uptime);
       
     }
     window.addEventListener('load', onLoad);

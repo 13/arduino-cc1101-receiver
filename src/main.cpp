@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #if defined(ESP8266)
+#include <ets_sys.h>
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ArduinoJson.h>
@@ -9,7 +10,6 @@
 #include <FS.h>
 #define SPIFFS LittleFS
 #include <LittleFS.h>
-#include <WebSerial.h>
 #else
 #include <EEPROM.h>
 #endif
@@ -24,17 +24,25 @@ PubSubClient mqttClient(wifiClient);
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 long mqttLastReconnectAttempt = 0;
-DynamicJsonDocument jsonDoc(200);
-// JsonArray cc1101Array = jsonDoc.createNestedArray("cc1101");
+DynamicJsonDocument wsJson(512);
+// JsonArray cc1101Array = wsJson.createNestedArray("cc1101");
 
 String hostname = "esp8266-";
 
-String wsSerializeJson(DynamicJsonDocument jDoc)
+uint32_t printUptime()
 {
-  String jsonString;
-  jDoc["wifi"]["rssi"] = WiFi.RSSI();
-  serializeJson(jDoc, jsonString);
-  return jsonString;
+  return system_get_time() / 1000000;
+}
+
+String wsSerializeJson(DynamicJsonDocument djDoc)
+{
+  String jsonStr;
+  djDoc["wifi"]["rssi"] = WiFi.RSSI();
+  djDoc["uptime"] = printUptime();
+  serializeJson(djDoc, jsonStr);
+  Serial.print("> [WS] ");
+  Serial.println(jsonStr);
+  return jsonStr;
 }
 
 String getIP()
@@ -44,11 +52,13 @@ String getIP()
 
 void notifyClients()
 {
-  // String jsonStringX;
-  // serializeJson(jsonDoc, jsonStringX);
-  // ws.textAll(getIP());
-  // ws.textAll(jsonStringX);
-  ws.textAll(wsSerializeJson(jsonDoc));
+  ws.textAll(wsSerializeJson(wsJson));
+}
+
+void notifyClients(DynamicJsonDocument djDoc)
+{
+  wsJson["cc1101"] = djDoc;
+  ws.textAll(wsSerializeJson(wsJson));
 }
 
 void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
@@ -118,11 +128,11 @@ void connectToWiFi()
   {
     Serial.print("> [WiFi] IP: ");
     Serial.println(WiFi.localIP().toString());
-    jsonDoc["wifi"]["ip"] = WiFi.localIP().toString();
-    jsonDoc["wifi"]["mac"] = WiFi.macAddress();
-    jsonDoc["wifi"]["ssid"] = WiFi.SSID();
-    jsonDoc["wifi"]["rssi"] = WiFi.RSSI();
-    jsonDoc["wifi"]["hostname"] = WiFi.hostname();
+    wsJson["wifi"]["ip"] = WiFi.localIP().toString();
+    wsJson["wifi"]["mac"] = WiFi.macAddress();
+    wsJson["wifi"]["ssid"] = WiFi.SSID();
+    wsJson["wifi"]["rssi"] = WiFi.RSSI();
+    wsJson["wifi"]["hostname"] = WiFi.hostname();
   }
 }
 boolean connectToMqtt()
@@ -148,23 +158,12 @@ boolean connectToMqtt()
   }
   else
   {
+    Serial.println("> [MQTT] Connected");
     mqttClient.publish(lastWillTopic.c_str(), "online", true);
   }
-  // WebSerial.print("MQTT: ");
-  // WebSerial.println(mqttClient.connected());
   return mqttClient.connected();
 }
 
-void recvMsg(uint8_t *data, size_t len)
-{
-  WebSerial.println("Received Data...");
-  String d = "";
-  for (int i = 0; i < len; i++)
-  {
-    d += char(data[i]);
-  }
-  WebSerial.println(d);
-}
 #endif
 
 // cc1101
@@ -291,7 +290,6 @@ void setup()
 #endif
   // Start CC1101
   Serial.print(F("> [CC1101] Initializing... "));
-  // ELECHOUSE_cc1101.setSpiPin(SCK, MISO, MOSI, CSN);
   int cc_state = ELECHOUSE_cc1101.getCC1101();
   if (cc_state)
   {
@@ -306,8 +304,10 @@ void setup()
     // ELECHOUSE_cc1101.setPA(CC_POWER);  // Set TxPower. The following settings are possible depending on the frequency band.  (-30  -20  -15  -10  -6    0    5    7    10   11   12) Default is max!
     ELECHOUSE_cc1101.setSyncMode(2); // Combined sync-word qualifier mode. 0 = No preamble/sync. 1 = 16 sync word bits detected. 2 = 16/16 sync word bits detected. 3 = 30/32 sync word bits detected. 4 = No preamble/sync, carrier-sense above threshold. 5 = 15/16 + carrier-sense above threshold. 6 = 16/16 + carrier-sense above threshold. 7 = 30/32 + carrier-sense above threshold.
     ELECHOUSE_cc1101.setCrc(1);      // 1 = CRC calculation in TX and CRC check in RX enabled. 0 = CRC disabled for TX and RX.
+#ifdef GD0
     // Bug with ESP8266
-    // ELECHOUSE_cc1101.setCRC_AF(1);   // Enable automatic flush of RX FIFO when CRC is not OK. This requires that only one packet is in the RXIFIFO and that packet length is limited to the RX FIFO size.
+    ELECHOUSE_cc1101.setCRC_AF(1); // Enable automatic flush of RX FIFO when CRC is not OK. This requires that only one packet is in the RXIFIFO and that packet length is limited to the RX FIFO size.
+#endif
   }
   else
   {
@@ -319,13 +319,8 @@ void setup()
 #if defined(ESP8266)
   initWebSocket();
   // Route for root / web page
-  // server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
-  //          { request->send_P(200, "text/html", index_html, processor); });
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send(LittleFS, "/index.html", String(), false, processor); });
-
-  // server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
-  //           { request->send(LittleFS, "/index.html", String(), false, processor); });
   server.on("/css/bootstrap.min.css", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send(LittleFS, "/css/bootstrap.min.css", "text/css"); });
   server.on("/js/bootstrap.bundle.min.js", HTTP_GET, [](AsyncWebServerRequest *request)
@@ -335,13 +330,7 @@ void setup()
   server.on("/ip", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send_P(200, "text/plain", getIP().c_str()); });
   server.on("/json", HTTP_GET, [](AsyncWebServerRequest *request)
-            { String jsonString; serializeJson(jsonDoc, jsonString);
-              request->send(200, "application/json", jsonString); });
-  server.on("/jsonx", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send(200, "application/json", wsSerializeJson(jsonDoc)); });
-  // WebSerial
-  WebSerial.begin(&server);
-  WebSerial.msgCallback(recvMsg);
+            { request->send(200, "application/json", wsSerializeJson(wsJson)); });
   // Start server
   server.begin();
 #endif
@@ -357,7 +346,7 @@ void loop()
   }
   if (!mqttClient.connected())
   {
-    WebSerial.println("> [MQTT] Not connected loop");
+    Serial.println("> [MQTT] Not connected loop");
     long mqttNow = millis();
     if (mqttNow - mqttLastReconnectAttempt > 5000)
     {
@@ -442,7 +431,7 @@ void loop()
         // Serial.println(input_str);
 
         // Create a DynamicJsonDocument object
-        DynamicJsonDocument doc(1024);
+        DynamicJsonDocument ccJson(512);
 
         // Split the input string into key-value pairs using comma separator
         uint8_t pos = 0;
@@ -461,48 +450,49 @@ void loop()
             String value_str = pair.substring(colon_pos + 1);
             if (key.startsWith("N") || key.startsWith("RN") || key.startsWith("F") || key.startsWith("RF"))
             {
-              doc[key] = value_str;
+              ccJson[key] = value_str;
             }
             else if ((key.startsWith("T") || key.startsWith("H") || key.startsWith("P")) || (key.startsWith("V") && value_str.length() > 1))
             {
               float value = value_str.toFloat() / 10.0;
-              doc[key] = round(value * 10.0) / 10.0;
+              ccJson[key] = round(value * 10.0) / 10.0;
             }
             else
             {
               int value = value_str.toInt();
-              doc[key] = value;
+              ccJson[key] = value;
             }
           }
           pos = sep_pos + 1;
         }
-        doc.remove("Z");
+        ccJson.remove("Z");
 
-        String jsonStr;
-        serializeJson(doc, jsonStr);
-        Serial.println(jsonStr);
-        WebSerial.println(jsonStr);
-        String topic = String(mqtt_topic) + "/" + String(doc["N"].as<String>()) + "/json";
+        String ccJsonStr;
+        serializeJson(ccJson, ccJsonStr);
+        Serial.println(ccJsonStr);
+
+        // wsJson.remove("cc1101");
+        // wsJson["cc1101"] = ccJson;
+        notifyClients(ccJson);
+
+        String topic = String(mqtt_topic) + "/" + String(ccJson["N"].as<String>()) + "/json";
         if (!mqttClient.connected())
         {
           Serial.println("> [MQTT] Not connected");
-          WebSerial.println("> [MQTT] Not connected");
           connectToMqtt();
         }
-        bool published = mqttClient.publish(topic.c_str(), jsonStr.c_str(), true);
+        bool published = mqttClient.publish(topic.c_str(), ccJsonStr.c_str(), true);
         if (published)
         {
           Serial.println("> [MQTT] Message published");
-          WebSerial.println("> [MQTT] Message published");
         }
         else
         {
           Serial.println("> [MQTT] Failed to publish message");
-          WebSerial.println("> [MQTT] Failed to publish message");
         }
 #endif
       } // length 0
-#ifdef DEBUG
+#ifdef DEBUG_CRC
       else
       {
         Serial.println(F("> [CC1101] Err: Size 0 "));
