@@ -242,6 +242,7 @@ void printMARK()
 #if defined(ESP8266)
     // 1 minute status update
     connectToMqtt();
+    notifyClients();
 #endif
   }
 }
