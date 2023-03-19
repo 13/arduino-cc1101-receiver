@@ -1,6 +1,5 @@
 #include <Arduino.h>
 #if defined(ESP8266)
-#include <ets_sys.h>
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ArduinoJson.h>
@@ -32,13 +31,13 @@ String hostname = "esp8266-";
 
 uint32_t printUptime()
 {
-  return system_get_time() / 1000000;
+  return 1;
 }
 
 String wsSerializeJson(StaticJsonDocument<512> djDoc)
 {
   String jsonStr;
-  wsJson["uptime"] = printUptime();
+  // wsJson["uptime"] = printUptime();
   wsJson["wifi"]["rssi"] = WiFi.RSSI();
   serializeJson(djDoc, jsonStr);
   Serial.print("> [WS] ");
