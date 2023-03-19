@@ -24,10 +24,9 @@ PubSubClient mqttClient(wifiClient);
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 long mqttLastReconnectAttempt = 0;
-DynamicJsonDocument wsJson(512);
-// StaticJsonDocument<512> wsJson;
+
+StaticJsonDocument<512> wsJson;
 // JsonObject wsJsonWi = wsJson.createNestedObject("wifi");
-// JsonObject wsJsonCc = wsJson.createNestedObject("cc1101");
 
 String hostname = "esp8266-";
 
@@ -36,15 +35,31 @@ uint32_t printUptime()
   return system_get_time() / 1000000;
 }
 
-String wsSerializeJson(DynamicJsonDocument djDoc)
+String wsSerializeJson(StaticJsonDocument<512> djDoc)
 {
   String jsonStr;
-  djDoc["wifi"]["rssi"] = WiFi.RSSI();
-  djDoc["uptime"] = printUptime();
+  wsJson["uptime"] = printUptime();
+  wsJson["wifi"]["rssi"] = WiFi.RSSI();
   serializeJson(djDoc, jsonStr);
-  // Serial.print("> [WS] ");
-  // Serial.println(jsonStr);
+  Serial.print("> [WS] ");
+  Serial.println(jsonStr);
   return jsonStr;
+}
+
+void getState()
+{
+  if (WiFi.status() == WL_CONNECTED)
+  {
+    Serial.print("> [WiFi] IP: ");
+    Serial.println(WiFi.localIP().toString());
+
+    wsJson["wifi"]["ip"] = WiFi.localIP().toString();
+    wsJson["wifi"]["mac"] = WiFi.macAddress();
+    wsJson["wifi"]["ssid"] = WiFi.SSID();
+    wsJson["wifi"]["rssi"] = WiFi.RSSI();
+    wsJson["wifi"]["hostname"] = WiFi.hostname();
+    wsJson["wifi"]["reset"] = ESP.getResetReason();
+  }
 }
 
 String getIP()
@@ -54,12 +69,6 @@ String getIP()
 
 void notifyClients()
 {
-  ws.textAll(wsSerializeJson(wsJson));
-}
-
-void notifyClients(DynamicJsonDocument djDoc)
-{
-  wsJson["cc1101"] = djDoc;
   ws.textAll(wsSerializeJson(wsJson));
 }
 
@@ -80,6 +89,7 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
   {
   case WS_EVT_CONNECT:
     Serial.printf("> [WebSocket] Client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
+    getState();
     notifyClients();
     break;
   case WS_EVT_DISCONNECT:
@@ -130,6 +140,7 @@ void connectToWiFi()
   {
     Serial.print("> [WiFi] IP: ");
     Serial.println(WiFi.localIP().toString());
+
     wsJson["wifi"]["ip"] = WiFi.localIP().toString();
     wsJson["wifi"]["mac"] = WiFi.macAddress();
     wsJson["wifi"]["ssid"] = WiFi.SSID();
@@ -143,6 +154,8 @@ boolean connectToMqtt()
 
   String lastWillTopic = "esp/";
   lastWillTopic += hostname;
+  String ipTopic = lastWillTopic;
+  ipTopic += "/ip";
   lastWillTopic += "/LWT";
 
   if (!mqttClient.connected())
@@ -152,6 +165,7 @@ boolean connectToMqtt()
     {
       Serial.println(" OK");
       mqttClient.publish(lastWillTopic.c_str(), "online", true);
+      mqttClient.publish(ipTopic.c_str(), WiFi.localIP().toString().c_str(), true);
     }
     else
     {
@@ -161,8 +175,9 @@ boolean connectToMqtt()
   }
   else
   {
-    Serial.println("> [MQTT] Connected");
+    // Serial.println("> [MQTT] Connected");
     mqttClient.publish(lastWillTopic.c_str(), "online", true);
+    mqttClient.publish(ipTopic.c_str(), WiFi.localIP().toString().c_str(), true);
   }
   return mqttClient.connected();
 }
@@ -435,7 +450,7 @@ void loop()
         // Serial.println(input_str);
 
         // Create a DynamicJsonDocument object
-        DynamicJsonDocument ccJson(256);
+        StaticJsonDocument<256> ccJson;
 
         // Split the input string into key-value pairs using comma separator
         uint8_t pos = 0;
@@ -473,11 +488,8 @@ void loop()
 
         String ccJsonStr;
         serializeJson(ccJson, ccJsonStr);
+        Serial.print("> [JSON] ");
         Serial.println(ccJsonStr);
-
-        // wsJson.remove("cc1101");
-        // wsJson["cc1101"] = ccJson;
-        notifyClients(ccJson);
 
         String topic = String(mqtt_topic) + "/" + String(ccJson["N"].as<String>()) + "/json";
         if (!mqttClient.connected())
@@ -494,6 +506,12 @@ void loop()
         {
           Serial.println("> [MQTT] Failed to publish message");
         }
+
+        // websocket
+        wsJson.clear();
+        wsJson["cc1101"].clear();
+        wsJson["cc1101"] = ccJson;
+        notifyClients();
 #endif
       } // length 0
 #ifdef DEBUG_CRC

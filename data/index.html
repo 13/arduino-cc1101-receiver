@@ -39,7 +39,7 @@
                   <tr>
                     <th><span class="labelReset">Reset: </span></th>
                     <td class="text-end"><span id="reset"></span></td>
-                  </tr>                  
+                  </tr>
                 </tbody>
               </table>
             </div>
@@ -52,28 +52,30 @@
   </body>
   <script>
     function formatTime(seconds) {
-      const minutes = Math.floor(seconds / 60);
-      const hours = Math.floor(minutes / 60);
-      const days = Math.floor(hours / 24);
+      if (typeof seconds === "undefined") {
+        return "";
+      } else {
+        const minutes = Math.floor(seconds / 60);
+        const hours = Math.floor(minutes / 60);
+        const days = Math.floor(hours / 24);
 
-      const formattedDays = days > 0 ? days + "d " : "";
-      const formattedHours =
-        hours - Math.floor(hours / 24) * 24 > 0
-          ? hours - Math.floor(hours / 24) * 24 + "h "
-          : "";
-      const formattedMinutes =
-        minutes - Math.floor(minutes / 60) * 60 > 0
-          ? minutes - Math.floor(minutes / 60) * 60 + "m "
-          : "";
-      const formattedSeconds =
-        seconds >= 60
-          ? seconds - (minutes * 60) + "s"
-          : seconds + "s";
+        const formattedDays = days > 0 ? days + "d " : "";
+        const formattedHours =
+          hours - Math.floor(hours / 24) * 24 > 0
+            ? hours - Math.floor(hours / 24) * 24 + "h "
+            : "";
+        const formattedMinutes =
+          minutes - Math.floor(minutes / 60) * 60 > 0
+            ? minutes - Math.floor(minutes / 60) * 60 + "m "
+            : "";
+        const formattedSeconds =
+          seconds >= 60 ? seconds - minutes * 60 + "s" : seconds + "s";
 
-      const formattedTime =
-        formattedDays + formattedHours + formattedMinutes + formattedSeconds;
+        const formattedTime =
+          formattedDays + formattedHours + formattedMinutes + formattedSeconds;
 
-      return formattedTime;
+        return formattedTime;
+      }
     }
 
     var gateway = `ws://${window.location.hostname}/ws`;
@@ -110,19 +112,36 @@
     function onMessage(event) {
       const parsedData = JSON.parse(event.data);
       console.log("JSON: " + event.data);
-      document.querySelector("title").textContent = parsedData.wifi.hostname;
-      document.getElementById("hostname").innerHTML = parsedData.wifi.hostname;
-      document.getElementById("cc1101").innerHTML = JSON.stringify(
-        parsedData.cc1101
-      );
-      document.getElementById("ip").innerHTML = parsedData.wifi.ip;
-      document.getElementById("ssid").innerHTML = parsedData.wifi.ssid;
-      document.getElementById("reset").innerHTML = parsedData.wifi.reset;
-
-      document.getElementById("rssi").innerHTML = parsedData.wifi.rssi;
-      document.getElementById("uptime").innerHTML = formatTime(
-        parsedData.uptime
-      );
+      if (typeof parsedData.wifi !== "undefined") {
+        if (typeof parsedData.wifi.hostname !== "undefined") {
+          document.querySelector("title").textContent =
+            parsedData.wifi.hostname;
+          document.getElementById("hostname").innerHTML =
+            parsedData.wifi.hostname;
+        }
+        if (typeof parsedData.wifi.ip !== "undefined") {
+          document.getElementById("ip").innerHTML = parsedData.wifi.ip;
+        }
+        if (typeof parsedData.wifi.ssid !== "undefined") {
+          document.getElementById("ssid").innerHTML = parsedData.wifi.ssid;
+        }
+        if (typeof parsedData.wifi.reset !== "undefined") {
+          document.getElementById("reset").innerHTML = parsedData.wifi.reset;
+        }
+        if (typeof parsedData.wifi.rssi !== "undefined") {
+          document.getElementById("rssi").innerHTML = parsedData.wifi.rssi;
+        }
+      }
+      if (typeof parsedData.uptime !== "undefined") {
+        document.getElementById("uptime").innerHTML = formatTime(
+          parsedData.uptime
+        );
+      }
+      if (typeof parsedData.cc1101 !== "undefined") {
+        document.getElementById("cc1101").innerHTML = JSON.stringify(
+          parsedData.cc1101
+        );
+      }
     }
     window.addEventListener("load", onLoad);
     function onLoad(event) {
