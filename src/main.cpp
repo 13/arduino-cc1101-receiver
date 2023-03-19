@@ -155,7 +155,7 @@ boolean connectToMqtt()
   String lastWillTopic = "esp/";
   lastWillTopic += hostname;
   String ipTopic = lastWillTopic;
-  ipTopic += "/ip";
+  ipTopic += "/IP";
   lastWillTopic += "/LWT";
 
   if (!mqttClient.connected())
