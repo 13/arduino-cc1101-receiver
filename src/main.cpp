@@ -26,8 +26,8 @@ AsyncWebSocket ws("/ws");
 long mqttLastReconnectAttempt = 0;
 DynamicJsonDocument wsJson(512);
 // StaticJsonDocument<512> wsJson;
-// JsonObject wsJsonObjWifi = wsJson.createNestedObject("wifi");
-// JsonObject wsJsonObjCC = wsJson.createNestedObject("cc1101");
+// JsonObject wsJsonWi = wsJson.createNestedObject("wifi");
+// JsonObject wsJsonCc = wsJson.createNestedObject("cc1101");
 
 String hostname = "esp8266-";
 
@@ -135,6 +135,7 @@ void connectToWiFi()
     wsJson["wifi"]["ssid"] = WiFi.SSID();
     wsJson["wifi"]["rssi"] = WiFi.RSSI();
     wsJson["wifi"]["hostname"] = WiFi.hostname();
+    wsJson["wifi"]["reset"] = ESP.getResetReason();
   }
 }
 boolean connectToMqtt()

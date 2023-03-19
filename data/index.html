@@ -33,9 +33,13 @@
                     <td class="text-end"><span id="ip"></span></td>
                   </tr>
                   <tr>
-                    <th><span class="labelUptime">UP: </span></th>
+                    <th><span class="labelUptime">Uptime: </span></th>
                     <td class="text-end"><span id="uptime"></span></td>
                   </tr>
+                  <tr>
+                    <th><span class="labelReset">Reset: </span></th>
+                    <td class="text-end"><span id="reset"></span></td>
+                  </tr>                  
                 </tbody>
               </table>
             </div>
@@ -62,8 +66,8 @@
           ? minutes - Math.floor(minutes / 60) * 60 + "m "
           : "";
       const formattedSeconds =
-        seconds - Math.floor(seconds / 60) * 60 > 0
-          ? seconds - Math.floor(seconds / 60) * 60 + "s"
+        seconds >= 60
+          ? seconds - (minutes * 60) + "s"
           : seconds + "s";
 
       const formattedTime =
@@ -113,6 +117,7 @@
       );
       document.getElementById("ip").innerHTML = parsedData.wifi.ip;
       document.getElementById("ssid").innerHTML = parsedData.wifi.ssid;
+      document.getElementById("reset").innerHTML = parsedData.wifi.reset;
 
       document.getElementById("rssi").innerHTML = parsedData.wifi.rssi;
       document.getElementById("uptime").innerHTML = formatTime(
