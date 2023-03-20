@@ -264,7 +264,7 @@ void printMARK()
 
 void setup()
 {
-  Serial.begin(9600);
+  Serial.begin(115200);
   delay(10);
 #ifdef VERBOSE
   delay(5000);
