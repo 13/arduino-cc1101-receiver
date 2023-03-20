@@ -25,7 +25,6 @@ AsyncWebSocket ws("/ws");
 long mqttLastReconnectAttempt = 0;
 
 StaticJsonDocument<512> wsJson;
-// JsonObject wsJsonWi = wsJson.createNestedObject("wifi");
 
 String hostname = "esp8266-";
 
@@ -314,6 +313,7 @@ void setup()
     Serial.println(F("OK"));
     ELECHOUSE_cc1101.Init(); // must be set to initialize the cc1101!
 #ifdef GD0
+    // Bug with ESP8266
     ELECHOUSE_cc1101.setGDO0(GD0); // set lib internal gdo pin (gdo0). Gdo2 not use for this example.
 #endif
     ELECHOUSE_cc1101.setCCMode(1);     // set config for internal transmission mode.
