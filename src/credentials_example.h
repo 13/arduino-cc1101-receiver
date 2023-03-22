@@ -15,9 +15,6 @@ const char *mqtt_pass = "";
 const char *mqtt_server = "192.168.22.5";
 const char *mqtt_topic = "sensors2";
 uint16_t mqtt_port = 1883;
-// #define GD0 5 // Bug with ESP
-#else
-#define GD0 2
 #endif
 
 // GIT
