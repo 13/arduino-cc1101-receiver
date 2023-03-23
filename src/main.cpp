@@ -9,6 +9,9 @@
 #include <FS.h>
 #define SPIFFS LittleFS
 #include <LittleFS.h>
+#ifdef RFID
+#include <rdm6300.h>
+#endif
 #else
 #include <EEPROM.h>
 #endif
@@ -23,6 +26,11 @@ PubSubClient mqttClient(wifiClient);
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 long mqttLastReconnectAttempt = 0;
+
+#ifdef RFID
+#define RDM6300_RX_PIN 4;
+Rdm6300 rfid;
+#endif
 
 StaticJsonDocument<512> wsJson;
 
@@ -188,6 +196,34 @@ boolean connectToMqtt()
   return mqttClient.connected();
 }
 
+#ifdef RFID
+void readRFID()
+{
+  static bool tagFound = false;
+  static unsigned long lastTagFoundTime = 0;
+
+// if (rfid.get_new_tag_id())
+//   Serial.println(rfid.get_tag_id(), HEX);
+
+  if (rfid.available())
+  {
+    String tag = rfid.read();
+
+    if (!tagFound)
+    {
+      tagFound = true;
+      lastTagFoundTime = millis();
+      Serial.println("Tag found: " + tag);
+    }
+  }
+  else if (tagFound && millis() - lastTagFoundTime > 1000)
+  {
+    tagFound = false;
+    Serial.println("Tag lost");
+  }
+}
+#endif
+
 #endif
 
 // cc1101
@@ -351,6 +387,11 @@ void setup()
             { request->send(200, "application/json", wsSerializeJson(wsJson)); });
   // Start server
   server.begin();
+
+#ifdef RFID
+  rfid.begin(RDM6300_RX_PIN);
+#endif
+
 #endif
 }
 
@@ -380,6 +421,9 @@ void loop()
   {
     mqttClient.loop();
   }
+#ifdef RFID
+  readRFID();
+#endif
 #endif
 #ifdef MARK
   printMARK();
