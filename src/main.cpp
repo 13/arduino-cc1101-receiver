@@ -128,12 +128,16 @@ void connectToWiFi()
   WiFi.hostname(hostname);
   WiFi.begin(wifi_ssid, wifi_pass);
   Serial.print("> [WiFi] Connecting...");
-  while (WiFi.status() != WL_CONNECTED)
+  for (int i = 0; i < 20; i++)
   {
+    if (WiFi.status() == WL_CONNECTED)
+    {
+      Serial.println(" OK");
+      break;
+    }
     Serial.print(".");
     delay(1000);
   }
-  Serial.println(" OK");
   if (WiFi.status() == WL_CONNECTED)
   {
     Serial.print("> [WiFi] IP: ");
@@ -145,6 +149,10 @@ void connectToWiFi()
     wsJson["wifi"]["rssi"] = WiFi.RSSI();
     wsJson["wifi"]["hostname"] = WiFi.hostname();
     wsJson["wifi"]["reset"] = ESP.getResetReason();
+  }
+  else
+  {
+    Serial.println(" ERR TIMEOUT");
   }
 }
 boolean connectToMqtt()
@@ -311,7 +319,7 @@ void setup()
   if (cc_state)
   {
     Serial.println(F("OK"));
-    ELECHOUSE_cc1101.Init(); // must be set to initialize the cc1101!
+    ELECHOUSE_cc1101.Init();           // must be set to initialize the cc1101!
     ELECHOUSE_cc1101.setCCMode(1);     // set config for internal transmission mode.
     ELECHOUSE_cc1101.setModulation(0); // set modulation mode. 0 = 2-FSK, 1 = GFSK, 2 = ASK/OOK, 3 = 4-FSK, 4 = MSK.
     ELECHOUSE_cc1101.setMHZ(CC_FREQ);  // Here you can set your basic frequency. The lib calculates the frequency automatically (default = 433.92).The cc1101 can: 300-348 MHZ, 387-464MHZ and 779-928MHZ. Read More info from datasheet.
