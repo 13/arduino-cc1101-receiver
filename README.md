@@ -30,6 +30,7 @@ T = temperature
 H = humidity
 P = pressure
 A = altitude
+Q = air quality
 V = voltage
 M = motion
 S = switch
@@ -42,6 +43,7 @@ X3 = bmp280
 X4 = bme680
 
 RSSI = Signal strength
+LQI = Signal quality
 RN = receiver node id
 ```
 
