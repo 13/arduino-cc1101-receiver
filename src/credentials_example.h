@@ -13,7 +13,8 @@ const char *wifi_pass = "";
 const char *mqtt_user = "";
 const char *mqtt_pass = "";
 const char *mqtt_server = "192.168.22.5";
-const char *mqtt_topic = "sensors2";
+const char *mqtt_topic = "muh/sensors";
+const char* mqtt_topic_lwt = "muh/esp";
 uint16_t mqtt_port = 1883;
 #endif
 

@@ -158,7 +158,8 @@ void connectToWiFi()
 boolean connectToMqtt()
 {
 
-  String lastWillTopic = "esp/";
+  String lastWillTopic = mqtt_topic_lwt;
+  lastWillTopic += "/";
   lastWillTopic += hostname;
   String ipTopic = lastWillTopic;
   ipTopic += "/IP";
