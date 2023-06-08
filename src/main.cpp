@@ -322,10 +322,23 @@ void setup()
     ELECHOUSE_cc1101.Init();           // must be set to initialize the cc1101!
     ELECHOUSE_cc1101.setCCMode(1);     // set config for internal transmission mode.
     ELECHOUSE_cc1101.setModulation(0); // set modulation mode. 0 = 2-FSK, 1 = GFSK, 2 = ASK/OOK, 3 = 4-FSK, 4 = MSK.
+#if defined(WSTATION)
+    ELECHOUSE_cc1101.setMHZ(CC_FREQ);  // Here you can set your basic frequency. The lib calculates the frequency automatically (default = 433.92).The cc1101 can: 300-348 MHZ, 387-464MHZ and 779-928MHZ. Read More info from datasheet.
+    ELECHOUSE_cc1101.setDRate(CC_BR);       // Set the Data Rate in kBaud. Value from 0.02 to 1621.83. Default is 99.97 kBaud!
+    ELECHOUSE_cc1101.setDeviation(CC_FD);   // Set the Frequency deviation in kHz. Value from 1.58 to 380.85. Default is 47.60 kHz.
+    ELECHOUSE_cc1101.setRxBW(CC_RxBW);       // Set the Receive Bandwidth in kHz. Value from 58.03 to 812.50. Default is 812.50 kHz.
+    ELECHOUSE_cc1101.setSyncMode(CC_SM); // Combined sync-word qualifier mode. 0 = No preamble/sync. 1 = 16 sync word bits detected. 2 = 16/16 sync word bits detected. 3 = 30/32 sync word bits detected. 4 = No preamble/sync, carrier-sense above threshold. 5 = 15/16 + carrier-sense above threshold. 6 = 16/16 + carrier-sense above threshold. 7 = 30/32 + carrier-sense above threshold.
+    ELECHOUSE_cc1101.setCrc(0);      // 1 = CRC calculation in TX and CRC check in RX enabled. 0 = CRC disabled for TX and RX.
+    ELECHOUSE_cc1101.setSyncWord(0xAA, 0x2D); // Set sync word. Must be the same for the transmitter and receiver. (Syncword high, Syncword low)
+    ELECHOUSE_cc1101.setLengthConfig(1);    // 0 = Fixed packet length mode. 1 = Variable packet length mode. 2 = Infinite packet length mode. 3 = Reserved
+    ELECHOUSE_cc1101.setPacketLength(0);    // Indicates the packet length when fixed packet length mode is enabled. If variable packet length mode is used, this value indicates the maximum packet length allowed.
+    ELECHOUSE_cc1101.setWhiteData(0);       // Turn data whitening on / off. 0 = Whitening off. 1 = Whitening on.
+#else
     ELECHOUSE_cc1101.setMHZ(CC_FREQ);  // Here you can set your basic frequency. The lib calculates the frequency automatically (default = 433.92).The cc1101 can: 300-348 MHZ, 387-464MHZ and 779-928MHZ. Read More info from datasheet.
     // ELECHOUSE_cc1101.setPA(CC_POWER);  // Set TxPower. The following settings are possible depending on the frequency band.  (-30  -20  -15  -10  -6    0    5    7    10   11   12) Default is max!
     ELECHOUSE_cc1101.setSyncMode(2); // Combined sync-word qualifier mode. 0 = No preamble/sync. 1 = 16 sync word bits detected. 2 = 16/16 sync word bits detected. 3 = 30/32 sync word bits detected. 4 = No preamble/sync, carrier-sense above threshold. 5 = 15/16 + carrier-sense above threshold. 6 = 16/16 + carrier-sense above threshold. 7 = 30/32 + carrier-sense above threshold.
     ELECHOUSE_cc1101.setCrc(1);      // 1 = CRC calculation in TX and CRC check in RX enabled. 0 = CRC disabled for TX and RX.
+#endif
   }
   else
   {
@@ -421,17 +434,10 @@ void loop()
       {
         for (uint8_t i = 0; i < byteArrLen; i++)
         {
-          // Filter [0-9A-Za-z,:]
-          if ((byteArr[i] >= '0' && byteArr[i] <= '9') ||
-              (byteArr[i] >= 'A' && byteArr[i] <= 'Z') ||
-              (byteArr[i] >= 'a' && byteArr[i] <= 'z') ||
-              byteArr[i] == ',' || byteArr[i] == ':' || byteArr[i] == '-')
-          {
             Serial.print((char)byteArr[i]);
 #if defined(ESP8266)
             input_str += (char)byteArr[i];
 #endif
-          }
         }
         Serial.print(F(",RSSI:"));
         Serial.print(rssi);
