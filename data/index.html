@@ -17,7 +17,8 @@
     <div class="container">
       <div class="row">
         <div class="col">
-          <h3 id="hostname" class="text-center"></h3>
+          <div id="hostname" class="display-6 text-center"></div>
+          <p id="desc" class="lead text-center">arduino cc1101 receiver</p>
           <div>
             <div>
               <table class="table table-hover">
@@ -44,7 +45,7 @@
               </table>
             </div>
           </div>
-          <p class="text-center small"><span id="cc1101"></span></p>
+          <div class="list-group list-group-flush" id="cc1101"></div>
         </div>
       </div>
     </div>
@@ -80,6 +81,7 @@
 
     var gateway = `ws://${window.location.hostname}/ws`;
     var websocket;
+
     function initWebSocket() {
       console.log("Trying to open a WebSocket connection...");
       websocket = new WebSocket(gateway);
@@ -132,15 +134,8 @@
           document.getElementById("rssi").innerHTML = parsedData.wifi.rssi;
         }
       }
-      /*if (typeof parsedData.uptime !== "undefined") {
-        document.getElementById("uptime").innerHTML = formatTime(
-          parsedData.uptime
-        );
-      }*/
       if (typeof parsedData.cc1101 !== "undefined") {
-        document.getElementById("cc1101").innerHTML = JSON.stringify(
-          parsedData.cc1101
-        );
+        document.getElementById("cc1101").innerHTML = parsedData.cc1101.map(element => '<a href="#" class="list-group-item list-group-item-action">' + JSON.stringify(element) + '</a>').join('');
       }
     }
     window.addEventListener("load", onLoad);

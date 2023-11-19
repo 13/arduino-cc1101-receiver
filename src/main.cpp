@@ -24,7 +24,8 @@ AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 long mqttLastReconnectAttempt = 0;
 
-StaticJsonDocument<512> wsJson;
+//StaticJsonDocument<512> wsJson;
+StaticJsonDocument<2048> wsJson;
 
 String hostname = "esp8266-";
 
@@ -33,7 +34,8 @@ uint32_t printUptime()
   return 1;
 }
 
-String wsSerializeJson(StaticJsonDocument<512> djDoc)
+//String wsSerializeJson(StaticJsonDocument<512> djDoc)
+String wsSerializeJson(StaticJsonDocument<2048> djDoc)
 {
   String jsonStr;
   // wsJson["uptime"] = printUptime();
@@ -518,10 +520,17 @@ void loop()
         }
 
         // websocket
-        wsJson.clear();
-        wsJson["cc1101"].clear();
-        wsJson["cc1101"] = ccJson;
-        notifyClients();
+        //wsJson.clear();
+        if (wsJson["cc1101"].size() == MAX_SENSOR_DATA){
+          wsJson["cc1101"].remove(wsJson["cc1101"].size()-1);
+        }
+        for (int i = 1; i <= MAX_SENSOR_DATA-1; i++){
+          if (!wsJson["cc1101"][i].isNull()){
+            wsJson["cc1101"][i] = wsJson["cc1101"][i - 1];
+          }
+        }
+        wsJson["cc1101"][0] = ccJson;
+        notifyClients();        
 #endif
       } // length 0
 #ifdef DEBUG_CRC
