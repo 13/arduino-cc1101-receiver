@@ -143,6 +143,12 @@ void connectToWiFi()
     Serial.print("> [WiFi] IP: ");
     Serial.println(WiFi.localIP().toString());
 
+    if (WiFi.localIP() == IPAddress(0, 0, 0, 0)) {
+      Serial.println(" NO DHCP LEASE");
+      Serial.println("> [System] Reboot...");
+      ESP.restart();
+    }
+
     wsJson["wifi"]["ip"] = WiFi.localIP().toString();
     wsJson["wifi"]["mac"] = WiFi.macAddress();
     wsJson["wifi"]["ssid"] = WiFi.SSID();
@@ -153,6 +159,8 @@ void connectToWiFi()
   else
   {
     Serial.println(" ERR TIMEOUT");
+    Serial.println("> [System] Reboot...");
+    ESP.restart();
   }
 }
 boolean connectToMqtt()
