@@ -521,11 +521,13 @@ void loop()
 
         // websocket
         //wsJson.clear();
+        Serial.print("> [WS] wsJson size: ");
+        Serial.println(wsJson["cc1101"].size());
         if (wsJson["cc1101"].size() == MAX_SENSOR_DATA){
           wsJson["cc1101"].remove(wsJson["cc1101"].size()-1);
         }
         for (int i = 1; i <= MAX_SENSOR_DATA-1; i++){
-          if (!wsJson["cc1101"][i].isNull()){
+          if (!wsJson["cc1101"][i-1].isNull()){
             wsJson["cc1101"][i] = wsJson["cc1101"][i - 1];
           }
         }
