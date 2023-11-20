@@ -34,7 +34,9 @@
                     <td class="text-end"><span id="ip"></span></td>
                   </tr>
                   <tr>
-                    <th class="ps-3"><span class="labelUptime">Uptime: </span></th>
+                    <th class="ps-3">
+                      <span class="labelUptime">Uptime: </span>
+                    </th>
                     <td class="text-end"><span id="uptime"></span></td>
                   </tr>
                   <tr>
@@ -133,7 +135,25 @@
           document.getElementById("reset").innerHTML = parsedData.wifi.reset;
         }
         if (typeof parsedData.wifi.uptime !== "undefined") {
-          document.getElementById("uptime").innerHTML = parsedData.wifi.uptime;
+          var totalMinutes = parsedData.wifi.uptime;
+
+          var days = Math.floor(totalMinutes / (24 * 60));
+          var hours = Math.floor((totalMinutes % (24 * 60)) / 60);
+          var minutes = totalMinutes % 60;
+
+          var formattedUptime = "";
+
+          if (days > 0) {
+            formattedUptime += days + "d ";
+          }
+
+          if (hours > 0 || days > 0) {
+            formattedUptime += hours + "h ";
+          }
+
+          formattedUptime += minutes + "m";
+
+          document.getElementById("uptime").innerHTML = formattedUptime;
         }
         if (typeof parsedData.wifi.rssi !== "undefined") {
           document.getElementById("rssi").innerHTML = parsedData.wifi.rssi;
@@ -145,7 +165,7 @@
       ) {
         document.getElementById("cc1101").innerHTML =
           '<a href="#" class="list-group-item list-group-item-action fw-bold">Last 5 packets:</a>';
-        
+
         const listContent = parsedData.cc1101
           .filter((element) => element !== null)
           .map(

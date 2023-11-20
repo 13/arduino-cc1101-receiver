@@ -47,7 +47,7 @@ uint32_t printUptime()
 String wsSerializeJson(StaticJsonDocument<2048> djDoc)
 {
   String jsonStr;
-  // wsJson["uptime"] = printUptime();
+  wsJson["wifi"]["uptime"] = countMsg;
   wsJson["wifi"]["rssi"] = WiFi.RSSI();
   serializeJson(djDoc, jsonStr);
   Serial.print("> [WS] ");
@@ -523,7 +523,6 @@ void loop()
         }
 
         // websocket
-        // wsJson.clear();
 #ifdef DEBUG
         wsDataSize = wsJson["cc1101"].size();
         Serial.print("> [WS] wsJson size: ");
@@ -535,12 +534,12 @@ void loop()
           {
             if (i == MAX_SENSOR_DATA - 1){
               wsJson["cc1101"].remove(MAX_SENSOR_DATA-1);
-              wsJson.garbageCollect();
+              //wsJson.garbageCollect();
             }
             wsJson["cc1101"][i] = wsJson["cc1101"][i - 1];
           }
-          wsJson["cc1101"][0].clear();
-          wsJson.garbageCollect();
+          //wsJson["cc1101"][0].clear();
+          //wsJson.garbageCollect();
           wsJson["cc1101"][0] = ccJson;
           wsJson.garbageCollect();
         }
