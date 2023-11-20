@@ -32,9 +32,7 @@ AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 long mqttLastReconnectAttempt = 0;
 
-// StaticJsonDocument<512> wsJson;
-StaticJsonDocument<2048> wsJson;
-int wsDataSize = 0;
+JsonDocument wsJson;
 
 String hostname = "esp8266-";
 
@@ -43,8 +41,7 @@ uint32_t printUptime()
   return 1;
 }
 
-// String wsSerializeJson(StaticJsonDocument<512> djDoc)
-String wsSerializeJson(StaticJsonDocument<2048> djDoc)
+String wsSerializeJson(JsonDocument djDoc)
 {
   String jsonStr;
   wsJson["wifi"]["uptime"] = countMsg;
@@ -461,8 +458,7 @@ void loop()
         input_str += getUniqueID();
         // Serial.println(input_str);
 
-        // Create a DynamicJsonDocument object
-        StaticJsonDocument<256> ccJson;
+        JsonDocument ccJson;
 
         // Split the input string into key-value pairs using comma separator
         uint8_t pos = 0;
@@ -534,14 +530,10 @@ void loop()
           {
             if (i == MAX_SENSOR_DATA - 1){
               wsJson["cc1101"].remove(MAX_SENSOR_DATA-1);
-              //wsJson.garbageCollect();
             }
             wsJson["cc1101"][i] = wsJson["cc1101"][i - 1];
           }
-          //wsJson["cc1101"][0].clear();
-          //wsJson.garbageCollect();
           wsJson["cc1101"][0] = ccJson;
-          wsJson.garbageCollect();
         }
 
         notifyClients();
