@@ -34,6 +34,10 @@
                     <td class="text-end"><span id="ip"></span></td>
                   </tr>
                   <tr>
+                    <th class="ps-3"><span class="labelUptime">Uptime: </span></th>
+                    <td class="text-end"><span id="uptime"></span></td>
+                  </tr>
+                  <tr>
                     <th class="ps-3">
                       <span class="labelReset">Reset: </span>
                     </th>
@@ -127,6 +131,9 @@
         }
         if (typeof parsedData.wifi.reset !== "undefined") {
           document.getElementById("reset").innerHTML = parsedData.wifi.reset;
+        }
+        if (typeof parsedData.wifi.uptime !== "undefined") {
+          document.getElementById("uptime").innerHTML = parsedData.wifi.uptime;
         }
         if (typeof parsedData.wifi.rssi !== "undefined") {
           document.getElementById("rssi").innerHTML = parsedData.wifi.rssi;

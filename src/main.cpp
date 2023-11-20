@@ -17,6 +17,14 @@
 
 // Edit credentials.h
 
+#ifdef VERBOSE
+// one minute mark
+#define MARK
+#define INTERVAL_1MIN (1 * 60 * 1000L)
+unsigned long lastMillis = 0L;
+uint32_t countMsg = 0;
+#endif
+
 #if defined(ESP8266)
 WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient);
@@ -60,6 +68,7 @@ void getState()
     wsJson["wifi"]["rssi"] = WiFi.RSSI();
     wsJson["wifi"]["hostname"] = WiFi.hostname();
     wsJson["wifi"]["reset"] = ESP.getResetReason();
+    wsJson["wifi"]["uptime"] = countMsg;
   }
 }
 
@@ -224,14 +233,6 @@ String getUniqueID()
 #endif
   return uid;
 }
-
-#ifdef VERBOSE
-// one minute mark
-#define MARK
-#define INTERVAL_1MIN (1 * 60 * 1000L)
-unsigned long lastMillis = 0L;
-uint32_t countMsg = 0;
-#endif
 
 // supplementary functions
 #ifdef MARK
