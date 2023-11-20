@@ -21,24 +21,22 @@
           <p id="desc" class="lead text-center">arduino cc1101 receiver</p>
           <div>
             <div>
-              <table class="table table-hover">
+              <table class="table table-hover mb-0">
                 <tbody>
                   <tr>
-                    <th><span class="labelMqtt">SSID: </span></th>
+                    <th class="ps-3"><span class="labelMqtt">SSID: </span></th>
                     <td class="text-end">
                       <span id="ssid"></span> (<span id="rssi"></span>)
                     </td>
                   </tr>
                   <tr>
-                    <th><span class="labelIp">IP: </span></th>
+                    <th class="ps-3"><span class="labelIp">IP: </span></th>
                     <td class="text-end"><span id="ip"></span></td>
                   </tr>
-                  <!--<tr>
-                    <th><span class="labelUptime">Uptime: </span></th>
-                    <td class="text-end"><span id="uptime"></span></td>
-                  </tr>-->
                   <tr>
-                    <th><span class="labelReset">Reset: </span></th>
+                    <th class="ps-3">
+                      <span class="labelReset">Reset: </span>
+                    </th>
                     <td class="text-end"><span id="reset"></span></td>
                   </tr>
                 </tbody>
@@ -87,7 +85,7 @@
       websocket = new WebSocket(gateway);
       websocket.onopen = onOpen;
       websocket.onclose = onClose;
-      websocket.onmessage = onMessage; // <-- add this line
+      websocket.onmessage = onMessage;
     }
     function onOpen(event) {
       console.log("Connection opened");
@@ -134,8 +132,24 @@
           document.getElementById("rssi").innerHTML = parsedData.wifi.rssi;
         }
       }
-      if (typeof parsedData.cc1101 !== "undefined") {
-        document.getElementById("cc1101").innerHTML = parsedData.cc1101.map(element => '<a href="#" class="list-group-item list-group-item-action">' + JSON.stringify(element) + '</a>').join('');
+      if (
+        typeof parsedData.cc1101 !== "undefined" &&
+        parsedData.cc1101 !== null
+      ) {
+        document.getElementById("cc1101").innerHTML =
+          '<a href="#" class="list-group-item list-group-item-action fw-bold">Last 5 packets:</a>';
+        
+        const listContent = parsedData.cc1101
+          .filter((element) => element !== null)
+          .map(
+            (element) =>
+              '<a href="#" class="list-group-item list-group-item-action text-break">' +
+              JSON.stringify(element) +
+              "</a>"
+          )
+          .join("");
+
+        document.getElementById("cc1101").innerHTML += listContent;
       }
     }
     window.addEventListener("load", onLoad);

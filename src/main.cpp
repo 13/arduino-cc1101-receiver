@@ -24,8 +24,9 @@ AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 long mqttLastReconnectAttempt = 0;
 
-//StaticJsonDocument<512> wsJson;
+// StaticJsonDocument<512> wsJson;
 StaticJsonDocument<2048> wsJson;
+int wsDataSize = 0;
 
 String hostname = "esp8266-";
 
@@ -34,7 +35,7 @@ uint32_t printUptime()
   return 1;
 }
 
-//String wsSerializeJson(StaticJsonDocument<512> djDoc)
+// String wsSerializeJson(StaticJsonDocument<512> djDoc)
 String wsSerializeJson(StaticJsonDocument<2048> djDoc)
 {
   String jsonStr;
@@ -145,7 +146,8 @@ void connectToWiFi()
     Serial.print("> [WiFi] IP: ");
     Serial.println(WiFi.localIP().toString());
 
-    if (WiFi.localIP() == IPAddress(0, 0, 0, 0)) {
+    if (WiFi.localIP() == IPAddress(0, 0, 0, 0))
+    {
       Serial.println(" NO DHCP LEASE");
       Serial.println("> [System] Reboot...");
       ESP.restart();
@@ -520,19 +522,29 @@ void loop()
         }
 
         // websocket
-        //wsJson.clear();
+        // wsJson.clear();
+#ifdef DEBUG
+        wsDataSize = wsJson["cc1101"].size();
         Serial.print("> [WS] wsJson size: ");
-        Serial.println(wsJson["cc1101"].size());
-        if (wsJson["cc1101"].size() == MAX_SENSOR_DATA){
-          wsJson["cc1101"].remove(wsJson["cc1101"].size()-1);
-        }
-        for (int i = 1; i <= MAX_SENSOR_DATA-1; i++){
-          if (!wsJson["cc1101"][i-1].isNull()){
+        Serial.println(wsDataSize);
+#endif
+        if (!ccJson.isNull() && ccJson.containsKey("N"))
+        {
+          for (int i = MAX_SENSOR_DATA - 1; i > 0; --i)
+          {
+            if (i == MAX_SENSOR_DATA - 1){
+              wsJson["cc1101"].remove(MAX_SENSOR_DATA-1);
+              wsJson.garbageCollect();
+            }
             wsJson["cc1101"][i] = wsJson["cc1101"][i - 1];
           }
+          wsJson["cc1101"][0].clear();
+          wsJson.garbageCollect();
+          wsJson["cc1101"][0] = ccJson;
+          wsJson.garbageCollect();
         }
-        wsJson["cc1101"][0] = ccJson;
-        notifyClients();        
+
+        notifyClients();
 #endif
       } // length 0
 #ifdef DEBUG_CRC
