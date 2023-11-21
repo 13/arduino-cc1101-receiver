@@ -168,6 +168,7 @@ void connectToWiFi()
     wsJson["wifi"]["rssi"] = WiFi.RSSI();
     wsJson["wifi"]["hostname"] = WiFi.hostname();
     wsJson["wifi"]["reset"] = ESP.getResetReason();
+    wsJson["wifi"]["version"] = GIT_VERSION;
   }
   else
   {
