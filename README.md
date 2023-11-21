@@ -1,6 +1,10 @@
 # arduino-cc1101-receiver
 
-An Arduino CC1101 receiver
+An Arduino CC1101 receiver for ESP8266/ESP32
+
+<p align="center">
+<img src="assets/screenshot.png" width="300">
+</p>
 
 ## Contents
 
