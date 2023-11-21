@@ -73,6 +73,7 @@
         websocket.onopen = onOpen;
         websocket.onclose = onClose;
         websocket.onmessage = onMessage;
+        websocket.onerror = onError;
       }
 
       function onOpen(event) {
@@ -88,6 +89,18 @@
 
       function onClose(event) {
         console.log("Connection closed");
+        var element = document.getElementById("ws-state");
+        if (element.classList.contains("border-success")) {
+          element.classList.remove("border-success");
+        }
+        if (!element.classList.contains("border-danger")) {
+          element.classList.add("border-danger");
+        }
+        setTimeout(initWebSocket, 2000);
+      }
+
+      function onError(event) {
+        console.log("Connection closed by ERR");
         var element = document.getElementById("ws-state");
         if (element.classList.contains("border-success")) {
           element.classList.remove("border-success");
@@ -170,6 +183,16 @@
 
       function onLoad(event) {
         initWebSocket();
+
+        // Check WebSocket availability every 5 seconds
+        setInterval(checkWebSocketAvailability, 5000);
+      }
+
+      function checkWebSocketAvailability() {
+        if (websocket.readyState !== WebSocket.OPEN) {
+          console.log("WebSocket is not available. Reconnecting...");
+          initWebSocket();
+        }
       }
     </script>
   </body>

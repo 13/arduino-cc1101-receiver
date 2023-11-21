@@ -431,7 +431,7 @@ void loop()
 #if defined(ESP8266)
       String input_str = "";
 #endif
-      if (byteArrLen > 0)
+      if (byteArrLen > 0 && byteArrLen <= 64)
       {
         for (uint8_t i = 0; i < byteArrLen; i++)
         {
