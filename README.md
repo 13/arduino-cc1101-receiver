@@ -61,8 +61,10 @@ RN = receiver node id
 
 ### Prerequisites
 
-* An Arduino with a CC1101 module as a receiver
-* An Arduino with a CC1101 module as a transmitter
+* An Arduino/ESP8266/ESP32 with a CC1101 module as a receiver
+   * Wiring diagram: [SmartRC-CC1101-Driver-Lib](https://github.com/LSatan/SmartRC-CC1101-Driver-Lib/)
+* An Arduino with a CC1101 module as a transmitter [13/arduino-cc1101-transmitter](https://github.com/13/arduino-cc1101-transmitter)
+   * Wiring diagram: [AskSin++](https://asksinpp.de/Grundlagen/01_hardware.html#stromversorgung)
 * VSCode
 * PlatformIO
 
