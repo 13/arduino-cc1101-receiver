@@ -77,6 +77,13 @@ String getIP()
   return String(WiFi.localIP().toString());
 }
 
+void reboot()
+{
+  Serial.println("> [System] Reboot...");
+  delay(1000);
+  ESP.restart();
+}
+
 void notifyClients()
 {
   ws.textAll(wsSerializeJson(wsJson));
@@ -197,7 +204,7 @@ boolean connectToMqtt()
       Serial.println(" OK");
       mqttClient.publish(lastWillTopic.c_str(), "online", true);
       mqttClient.publish(ipTopic.c_str(), WiFi.localIP().toString().c_str(), true);
-      mqttClient.publish(GIT_VERSION.c_str(), true);
+      mqttClient.publish(versionTopic.c_str(), GIT_VERSION, true);
     }
     else
     {
@@ -210,7 +217,7 @@ boolean connectToMqtt()
     // Serial.println("> [MQTT] Connected");
     mqttClient.publish(lastWillTopic.c_str(), "online", true);
     mqttClient.publish(ipTopic.c_str(), WiFi.localIP().toString().c_str(), true);
-    mqttClient.publish(GIT_VERSION.c_str(), true);
+    mqttClient.publish(versionTopic.c_str(), GIT_VERSION, true);
   }
   return mqttClient.connected();
 }
@@ -367,6 +374,10 @@ void setup()
             { request->send_P(200, "text/plain", getIP().c_str()); });
   server.on("/json", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send(200, "application/json", wsSerializeJson(wsJson)); });
+  server.on("/reboot", HTTP_GET, [](AsyncWebServerRequest *request)
+            { request->send(200, "application/json", "{\"status\":\"rebooting\"}");
+              reboot();
+            });
   // Start server
   server.begin();
 #endif
@@ -435,7 +446,7 @@ void loop()
 #if defined(ESP8266)
       String input_str = "";
 #endif
-      if (byteArrLen > 0 && byteArrLen <= 64)
+      if (byteArrLen > 0 && byteArrLen <= byteArrSize)
       {
         for (uint8_t i = 0; i < byteArrLen; i++)
         {
