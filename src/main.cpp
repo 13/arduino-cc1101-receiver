@@ -39,12 +39,6 @@ int connectedClients = 0;
 
 String hostname = "esp8266-";
 
-uint32_t printUptime()
-{
-  return 1;
-}
-
-// String wsSerializeJson(StaticJsonDocument<512> djDoc)
 String wsSerializeJson(StaticJsonDocument<2048> djDoc)
 {
   String jsonStr;
@@ -133,7 +127,6 @@ void initWebSocket()
   server.addHandler(&ws);
 }
 
-// Replaces placeholder with LED state value
 String processor(const String &var)
 {
   Serial.println(var);
@@ -577,7 +570,6 @@ void loop()
           wsJson["cc1101"][0] = ccJson;
           wsJson.garbageCollect();
         }
-
         notifyClients();
 #endif
       } // length 0

@@ -1,6 +1,6 @@
 #define VERBOSE
-// #define DEBUG
-// #define DEBUG_CRC
+//#define DEBUG
+//#define DEBUG_CRC
 
 #define CC_FREQ 868.32
 #define CC_POWER 12
