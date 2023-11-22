@@ -185,6 +185,8 @@ boolean connectToMqtt()
   lastWillTopic += hostname;
   String ipTopic = lastWillTopic;
   ipTopic += "/IP";
+  String versionTopic = lastWillTopic;
+  versionTopic += "/VERSION";
   lastWillTopic += "/LWT";
 
   if (!mqttClient.connected())
@@ -195,6 +197,7 @@ boolean connectToMqtt()
       Serial.println(" OK");
       mqttClient.publish(lastWillTopic.c_str(), "online", true);
       mqttClient.publish(ipTopic.c_str(), WiFi.localIP().toString().c_str(), true);
+      mqttClient.publish(GIT_VERSION.c_str(), true);
     }
     else
     {
@@ -207,6 +210,7 @@ boolean connectToMqtt()
     // Serial.println("> [MQTT] Connected");
     mqttClient.publish(lastWillTopic.c_str(), "online", true);
     mqttClient.publish(ipTopic.c_str(), WiFi.localIP().toString().c_str(), true);
+    mqttClient.publish(GIT_VERSION.c_str(), true);
   }
   return mqttClient.connected();
 }
