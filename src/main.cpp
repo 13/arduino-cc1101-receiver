@@ -35,6 +35,7 @@ long mqttLastReconnectAttempt = 0;
 // StaticJsonDocument<512> wsJson;
 StaticJsonDocument<2048> wsJson;
 int wsDataSize = 0;
+int connectedClients = 0;
 
 String hostname = "esp8266-";
 
@@ -86,7 +87,10 @@ void reboot()
 
 void notifyClients()
 {
-  ws.textAll(wsSerializeJson(wsJson));
+  if (connectedClients > 0)
+  {
+    ws.textAll(wsSerializeJson(wsJson));
+  }
 }
 
 void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
@@ -106,11 +110,13 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
   {
   case WS_EVT_CONNECT:
     Serial.printf("> [WebSocket] Client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
+    connectedClients++;
     getState();
     notifyClients();
     break;
   case WS_EVT_DISCONNECT:
     Serial.printf("> [WebSocket] Client #%u disconnected\n", client->id());
+    connectedClients--;
     break;
   case WS_EVT_DATA:
     handleWebSocketMessage(arg, data, len);
@@ -356,8 +362,12 @@ void setup()
   {
     Serial.print(F("ERR "));
     Serial.println(cc_state);
+#if defined(ESP8266)
+    reboot();
+#else
     while (true)
       ;
+#endif
   }
 #if defined(ESP8266)
   initWebSocket();
@@ -376,8 +386,7 @@ void setup()
             { request->send(200, "application/json", wsSerializeJson(wsJson)); });
   server.on("/reboot", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send(200, "application/json", "{\"status\":\"rebooting\"}");
-              reboot();
-            });
+              reboot(); });
   // Start server
   server.begin();
 #endif
@@ -437,9 +446,21 @@ void loop()
       int byteArrLen = ELECHOUSE_cc1101.ReceiveData(byteArr);
       int rssi = ELECHOUSE_cc1101.getRssi();
       int lqi = ELECHOUSE_cc1101.getLqi();
-      byteArr[byteArrLen] = '\0'; // 0, \0
+      if (byteArrLen > 0 && byteArrLen <= byteArrSize)
+      {
 #ifdef VERBOSE
-      Serial.println(F("OK"));
+        Serial.println(F("OK"));
+#endif
+        byteArr[byteArrLen] = '\0'; // 0, \0
+      }
+      else
+      {
+#ifdef VERBOSE
+        Serial.println(F("OK"));
+#endif
+        byteArrLen = -1;
+      }
+#ifdef VERBOSE
       Serial.print(F("> [CC1101] Length: "));
       Serial.println(byteArrLen);
 #endif
@@ -477,7 +498,6 @@ void loop()
         input_str += getUniqueID();
         // Serial.println(input_str);
 
-        // Create a DynamicJsonDocument object
         StaticJsonDocument<256> ccJson;
 
         // Split the input string into key-value pairs using comma separator
@@ -548,14 +568,12 @@ void loop()
         {
           for (int i = MAX_SENSOR_DATA - 1; i > 0; --i)
           {
-            if (i == MAX_SENSOR_DATA - 1){
-              wsJson["cc1101"].remove(MAX_SENSOR_DATA-1);
-              //wsJson.garbageCollect();
+            if (i == MAX_SENSOR_DATA - 1)
+            {
+              wsJson["cc1101"].remove(MAX_SENSOR_DATA - 1);
             }
             wsJson["cc1101"][i] = wsJson["cc1101"][i - 1];
           }
-          //wsJson["cc1101"][0].clear();
-          //wsJson.garbageCollect();
           wsJson["cc1101"][0] = ccJson;
           wsJson.garbageCollect();
         }
