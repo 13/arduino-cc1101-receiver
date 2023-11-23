@@ -32,8 +32,10 @@ AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 long mqttLastReconnectAttempt = 0;
 
-//StaticJsonDocument<2048> wsJson;
+//StaticJsonDocument<4096> wsJson;
 DynamicJsonDocument wsJson(4096);
+JsonObject wsJsonWifi = wsJson.createNestedObject("wifi");
+JsonArray wsJsonCc1101 = wsJson.createNestedArray("cc1101");
 int wsDataSize = 0;
 int connectedClients = 0;
 
@@ -42,10 +44,10 @@ String hostname = "esp8266-";
 String wsSerializeJson()
 {
   String jsonStr;
-  wsJson["wifi"]["uptime"] = countMsg;
-  wsJson["wifi"]["rssi"] = WiFi.RSSI();
-  wsJson["wifi"]["memfree"] = ESP.getFreeHeap();
-  wsJson["wifi"]["memfrag"] = ESP.getHeapFragmentation();
+  wsJsonWifi["uptime"] = countMsg;
+  wsJsonWifi["rssi"] = WiFi.RSSI();
+  wsJsonWifi["memfree"] = ESP.getFreeHeap();
+  wsJsonWifi["memfrag"] = ESP.getHeapFragmentation();
   serializeJson(wsJson, jsonStr);
   Serial.print("> [WS] ");
   Serial.println(jsonStr);
@@ -59,15 +61,15 @@ void getState()
     Serial.print("> [WiFi] IP: ");
     Serial.println(WiFi.localIP().toString());
 
-    wsJson["wifi"]["ip"] = WiFi.localIP().toString();
-    wsJson["wifi"]["mac"] = WiFi.macAddress();
-    wsJson["wifi"]["ssid"] = WiFi.SSID();
-    wsJson["wifi"]["rssi"] = WiFi.RSSI();
-    wsJson["wifi"]["hostname"] = WiFi.hostname();
-    wsJson["wifi"]["reset"] = ESP.getResetReason();
-    wsJson["wifi"]["uptime"] = countMsg;
-    wsJson["wifi"]["memfree"] = ESP.getFreeHeap();
-    wsJson["wifi"]["memfrag"] = ESP.getHeapFragmentation();
+    wsJsonWifi["ip"] = WiFi.localIP().toString();
+    wsJsonWifi["mac"] = WiFi.macAddress();
+    wsJsonWifi["ssid"] = WiFi.SSID();
+    wsJsonWifi["rssi"] = WiFi.RSSI();
+    wsJsonWifi["hostname"] = WiFi.hostname();
+    wsJsonWifi["reset"] = ESP.getResetReason();
+    wsJsonWifi["uptime"] = countMsg;
+    wsJsonWifi["memfree"] = ESP.getFreeHeap();
+    wsJsonWifi["memfrag"] = ESP.getHeapFragmentation();
   }
 }
 
@@ -168,23 +170,21 @@ void connectToWiFi()
     if (WiFi.localIP() == IPAddress(0, 0, 0, 0))
     {
       Serial.println(" NO DHCP LEASE");
-      Serial.println("> [System] Reboot...");
-      ESP.restart();
+      reboot();
     }
 
-    wsJson["wifi"]["ip"] = WiFi.localIP().toString();
-    wsJson["wifi"]["mac"] = WiFi.macAddress();
-    wsJson["wifi"]["ssid"] = WiFi.SSID();
-    wsJson["wifi"]["rssi"] = WiFi.RSSI();
-    wsJson["wifi"]["hostname"] = WiFi.hostname();
-    wsJson["wifi"]["reset"] = ESP.getResetReason();
-    wsJson["wifi"]["version"] = GIT_VERSION;
+    wsJsonWifi["ip"] = WiFi.localIP().toString();
+    wsJsonWifi["mac"] = WiFi.macAddress();
+    wsJsonWifi["ssid"] = WiFi.SSID();
+    wsJsonWifi["rssi"] = WiFi.RSSI();
+    wsJsonWifi["hostname"] = WiFi.hostname();
+    wsJsonWifi["reset"] = ESP.getResetReason();
+    wsJsonWifi["version"] = GIT_VERSION;
   }
   else
   {
     Serial.println(" ERR TIMEOUT");
-    Serial.println("> [System] Reboot...");
-    ESP.restart();
+    reboot();
   }
 }
 boolean connectToMqtt()
@@ -495,7 +495,9 @@ void loop()
         // Serial.println(input_str);
 
 
-        StaticJsonDocument<512> ccJson;
+        //StaticJsonDocument<512> ccJson;
+        //DynamicJsonDocument ccJson(512);
+        JsonObject ccJson = wsJsonCc1101.createNestedObject();
 
         // Split the input string into key-value pairs using comma separator
         uint8_t pos = 0;
@@ -557,7 +559,8 @@ void loop()
 
         // websocket
 #ifdef DEBUG
-        wsDataSize = wsJson["cc1101"].size();
+        //wsDataSize = wsJson["cc1101"].size();
+        wsDataSize = wsJsonCc1101.size();
         Serial.print("> [WS] wsJson size: ");
         Serial.println(wsDataSize);
 #endif
@@ -568,18 +571,23 @@ void loop()
           {
             if (i == MAX_SENSOR_DATA - 1)
             {
-              wsJson["cc1101"].remove(MAX_SENSOR_DATA - 1);
+              //wsJson["cc1101"].remove(MAX_SENSOR_DATA - 1);
+              wsJsonCc1101.remove(MAX_SENSOR_DATA - 1);
             }
-            wsJson["cc1101"][i] = wsJson["cc1101"][i - 1];
+            //wsJson["cc1101"][i] = wsJson["cc1101"][i - 1];
+            wsJsonCc1101[i] = wsJsonCc1101[i - 1];
           }
-          wsJson["cc1101"][0] = ccJson;
+          wsJsonCc1101.remove(0);
+          wsJsonCc1101[0] = ccJson;
+          //wsJson["cc1101"].remove(0);
+          //wsJson["cc1101"][0] = ccJson;
         }
 #else
         if (!ccJson.isNull() && ccJson.containsKey("N"))
         {
-          wsJson.clear();
-          wsJson["cc1101"].clear();
-          wsJson["cc1101"][0] = ccJson;
+          wsJsonCc1101[0] = ccJson;
+          //wsJson["cc1101"].remove(0);
+          //wsJson["cc1101"][0] = ccJson;
         }
 #endif
         notifyClients();
