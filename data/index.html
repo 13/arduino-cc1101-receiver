@@ -40,7 +40,7 @@
                       <th class="ps-3">
                         <span class="labelRam">RAM: </span>
                       </th>
-                      <td class="text-end"><span id="ramfree"></span><span id="ramtotal"></span><span id="ramfrag"></span></td>
+                      <td class="text-end"><span id="memfree"></span><span id="memfrag"></span></td>
                     </tr>
                     <tr>
                       <th class="ps-3">
@@ -110,9 +110,8 @@
         const versionElement = document.getElementById("version");
         const uptimeElement = document.getElementById("uptime");
         const rssiElement = document.getElementById("rssi");
-        const ramFreeElement = document.getElementById("ramFree");
-        const ramTotalElement = document.getElementById("ramTotal");
-        const ramFragElement = document.getElementById("ramFrag");
+        const memFreeElement = document.getElementById("memfree");
+        const memFragElement = document.getElementById("memfrag");
 
         if (parsedData.wifi) {
           if (parsedData.wifi.hostname) {
@@ -131,14 +130,11 @@
           if (parsedData.wifi.version) {
             versionElement.innerHTML = parsedData.wifi.version;
           }
-          if (parsedData.wifi.ramfree) {
-            ramFreeElement.innerHTML = parsedData.wifi.ramfree + "/";
+          if (parsedData.wifi.memfree) {
+            memFreeElement.innerHTML = (parsedData.wifi.memfree/1024).toFixed(2) + 'KB';
           }
-          if (parsedData.wifi.ramtotal) {
-            ramTotalElement.innerHTML = parsedData.wifi.ramtotal;
-          }
-          if (parsedData.wifi.ramfree) {
-            ramFragElement.innerHTML = " (" + parsedData.wifi.ramfrag + "%)";
+          if (parsedData.wifi.memfrag) {
+            memFragElement.innerHTML = ' (' + parsedData.wifi.memfrag + '%)';
           }
           if (parsedData.wifi.uptime) {
             const totalMinutes = parsedData.wifi.uptime;

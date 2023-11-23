@@ -32,22 +32,21 @@ AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 long mqttLastReconnectAttempt = 0;
 
-// StaticJsonDocument<512> wsJson;
-StaticJsonDocument<2048> wsJson;
+//StaticJsonDocument<2048> wsJson;
+DynamicJsonDocument wsJson(4096);
 int wsDataSize = 0;
 int connectedClients = 0;
 
 String hostname = "esp8266-";
 
-String wsSerializeJson(StaticJsonDocument<2048> djDoc)
+String wsSerializeJson()
 {
   String jsonStr;
   wsJson["wifi"]["uptime"] = countMsg;
   wsJson["wifi"]["rssi"] = WiFi.RSSI();
-  wsJson["wifi"]["ramfree"] = ESP.getFreeHeap();
-  wsJson["wifi"]["ramfrag"] = ESP.getHeapFragmentation();
-  wsJson["wifi"]["ramtotal"] = ESP.getMaxFreeBlockSize();
-  serializeJson(djDoc, jsonStr);
+  wsJson["wifi"]["memfree"] = ESP.getFreeHeap();
+  wsJson["wifi"]["memfrag"] = ESP.getHeapFragmentation();
+  serializeJson(wsJson, jsonStr);
   Serial.print("> [WS] ");
   Serial.println(jsonStr);
   return jsonStr;
@@ -69,7 +68,6 @@ void getState()
     wsJson["wifi"]["uptime"] = countMsg;
     wsJson["wifi"]["memfree"] = ESP.getFreeHeap();
     wsJson["wifi"]["memfrag"] = ESP.getHeapFragmentation();
-    wsJson["wifi"]["memtotal"] = ESP.getMaxFreeBlockSize();
   }
 }
 
@@ -89,7 +87,7 @@ void notifyClients()
 {
   if (connectedClients > 0)
   {
-    ws.textAll(wsSerializeJson(wsJson));
+    ws.textAll(wsSerializeJson());
   }
 }
 
@@ -382,7 +380,7 @@ void setup()
   server.on("/ip", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send_P(200, "text/plain", getIP().c_str()); });
   server.on("/json", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send(200, "application/json", wsSerializeJson(wsJson)); });
+            { request->send(200, "application/json", wsSerializeJson()); });
   server.on("/reboot", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send(200, "application/json", "{\"status\":\"rebooting\"}");
               reboot(); });
@@ -455,9 +453,8 @@ void loop()
       else
       {
 #ifdef VERBOSE
-        Serial.println(F("OK"));
+        Serial.println(F("ERR"));
 #endif
-        byteArrLen = -1;
       }
 #ifdef VERBOSE
       Serial.print(F("> [CC1101] Length: "));
@@ -497,7 +494,8 @@ void loop()
         input_str += getUniqueID();
         // Serial.println(input_str);
 
-        StaticJsonDocument<256> ccJson;
+
+        StaticJsonDocument<512> ccJson;
 
         // Split the input string into key-value pairs using comma separator
         uint8_t pos = 0;
