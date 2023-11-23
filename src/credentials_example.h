@@ -17,6 +17,7 @@ const char* mqtt_topic = "muh/sensors";
 const char* mqtt_topic_lwt = "muh/esp";
 uint16_t mqtt_port = 1883;
 // #define GD0 5 // Bug with ESP8266
+#define WSPACKETS
 #define MAX_SENSOR_DATA 5
 #endif
 

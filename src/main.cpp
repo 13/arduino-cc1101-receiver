@@ -563,6 +563,7 @@ void loop()
         Serial.print("> [WS] wsJson size: ");
         Serial.println(wsDataSize);
 #endif
+#ifdef WSPACKETS
         if (!ccJson.isNull() && ccJson.containsKey("N"))
         {
           for (int i = MAX_SENSOR_DATA - 1; i > 0; --i)
@@ -574,8 +575,15 @@ void loop()
             wsJson["cc1101"][i] = wsJson["cc1101"][i - 1];
           }
           wsJson["cc1101"][0] = ccJson;
-          wsJson.garbageCollect();
         }
+#else
+        if (!ccJson.isNull() && ccJson.containsKey("N"))
+        {
+          wsJson.clear();
+          wsJson["cc1101"].clear();
+          wsJson["cc1101"][0] = ccJson;
+        }
+#endif
         notifyClients();
 #endif
       } // length 0
