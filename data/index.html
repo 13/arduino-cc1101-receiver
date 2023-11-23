@@ -44,6 +44,12 @@
                     </tr>
                     <tr>
                       <th class="ps-3">
+                        <span class="labelRam">RAM: </span>
+                      </th>
+                      <td class="text-end"><span id="ramfree"></span>x<span id="ramtotal"></span>x<span id="ramfrag"></span></td>
+                    </tr>
+                    <tr>
+                      <th class="ps-3">
                         <span class="labelReset">Reset: </span>
                       </th>
                       <td class="text-end"><span id="reset"></span></td>
@@ -110,6 +116,9 @@
         const versionElement = document.getElementById("version");
         const uptimeElement = document.getElementById("uptime");
         const rssiElement = document.getElementById("rssi");
+        const ramFreeElement = document.getElementById("ramFree");
+        const ramTotalElement = document.getElementById("ramTotal");
+        const ramFragElement = document.getElementById("ramFrag");
 
         if (parsedData.wifi) {
           if (parsedData.wifi.hostname) {
@@ -128,6 +137,15 @@
           }
           if (parsedData.wifi.version) {
             versionElement.innerHTML = parsedData.wifi.version;
+          }
+          if (parsedData.wifi.ramfree) {
+            ramFreeElement.innerHTML = parsedData.wifi.ramfree + '/';
+          }
+          if (parsedData.wifi.ramtotal) {
+            ramTotalElement.innerHTML = parsedData.wifi.ramtotal;
+          }
+          if (parsedData.wifi.ramfree) {
+            ramFragElement.innerHTML = ' (' + parsedData.wifi.ramfrag + '%)';
           }
           if (parsedData.wifi.uptime) {
             const totalMinutes = parsedData.wifi.uptime;

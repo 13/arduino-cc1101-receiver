@@ -7,12 +7,12 @@
 #include <ESPAsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include <FS.h>
+#include <ELECHOUSE_CC1101_SRC_DRV.h>
 #define SPIFFS LittleFS
 #include <LittleFS.h>
 #else
 #include <EEPROM.h>
 #endif
-#include <ELECHOUSE_CC1101_SRC_DRV.h>
 #include "credentials.h"
 
 // Edit credentials.h
@@ -44,6 +44,9 @@ String wsSerializeJson(StaticJsonDocument<2048> djDoc)
   String jsonStr;
   wsJson["wifi"]["uptime"] = countMsg;
   wsJson["wifi"]["rssi"] = WiFi.RSSI();
+  wsJson["wifi"]["ramfree"] = ESP.getFreeHeap();
+  wsJson["wifi"]["ramfrag"] = ESP.getHeapFragmentation();
+  wsJson["wifi"]["ramtotal"] = ESP.getMaxFreeBlockSize();
   serializeJson(djDoc, jsonStr);
   Serial.print("> [WS] ");
   Serial.println(jsonStr);
@@ -64,6 +67,9 @@ void getState()
     wsJson["wifi"]["hostname"] = WiFi.hostname();
     wsJson["wifi"]["reset"] = ESP.getResetReason();
     wsJson["wifi"]["uptime"] = countMsg;
+    wsJson["wifi"]["memfree"] = ESP.getFreeHeap();
+    wsJson["wifi"]["memfrag"] = ESP.getHeapFragmentation();
+    wsJson["wifi"]["memtotal"] = ESP.getMaxFreeBlockSize();
   }
 }
 
