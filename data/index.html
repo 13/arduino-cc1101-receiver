@@ -4,11 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title></title>
-    <link
-      href="css/bootstrap.min.css"
-      rel="stylesheet"
-      crossorigin="anonymous"
-    />
+    <link href="css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous" />
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
   </head>
 
@@ -28,9 +24,7 @@
                       <th class="ps-3">
                         <span class="labelMqtt">SSID: </span>
                       </th>
-                      <td class="text-end">
-                        <span id="ssid"></span> (<span id="rssi"></span>)
-                      </td>
+                      <td class="text-end"><span id="ssid"></span> (<span id="rssi"></span>)</td>
                     </tr>
                     <tr>
                       <th class="ps-3"><span class="labelIp">IP: </span></th>
@@ -46,7 +40,7 @@
                       <th class="ps-3">
                         <span class="labelRam">RAM: </span>
                       </th>
-                      <td class="text-end"><span id="ramfree"></span>x<span id="ramtotal"></span>x<span id="ramfrag"></span></td>
+                      <td class="text-end"><span id="ramfree"></span><span id="ramtotal"></span><span id="ramfrag"></span></td>
                     </tr>
                     <tr>
                       <th class="ps-3">
@@ -122,8 +116,7 @@
 
         if (parsedData.wifi) {
           if (parsedData.wifi.hostname) {
-            document.querySelector("title").textContent =
-              parsedData.wifi.hostname;
+            document.querySelector("title").textContent = parsedData.wifi.hostname;
             hostnameElement.innerHTML = parsedData.wifi.hostname;
           }
           if (parsedData.wifi.ip) {
@@ -139,25 +132,21 @@
             versionElement.innerHTML = parsedData.wifi.version;
           }
           if (parsedData.wifi.ramfree) {
-            ramFreeElement.innerHTML = parsedData.wifi.ramfree + '/';
+            ramFreeElement.innerHTML = parsedData.wifi.ramfree + "/";
           }
           if (parsedData.wifi.ramtotal) {
             ramTotalElement.innerHTML = parsedData.wifi.ramtotal;
           }
           if (parsedData.wifi.ramfree) {
-            ramFragElement.innerHTML = ' (' + parsedData.wifi.ramfrag + '%)';
+            ramFragElement.innerHTML = " (" + parsedData.wifi.ramfrag + "%)";
           }
           if (parsedData.wifi.uptime) {
             const totalMinutes = parsedData.wifi.uptime;
             const days = Math.floor(totalMinutes / (24 * 60));
             const totalMinutesPerDay = 24 * 60;
-            const hours = Math.floor(
-              totalMinutes / 60 - Math.floor(totalMinutes / (24 * 60)) * 24
-            );
+            const hours = Math.floor(totalMinutes / 60 - Math.floor(totalMinutes / (24 * 60)) * 24);
             const minutes = totalMinutes - hours * 60;
-            const formattedUptime = `${days ? days + "d " : ""}${
-              hours ? hours + "h " : ""
-            }${minutes}m`;
+            const formattedUptime = `${days ? days + "d " : ""}${hours ? hours + "h " : ""}${minutes}m`;
             uptimeElement.innerHTML = formattedUptime;
           }
           if (parsedData.wifi.rssi) {
@@ -167,17 +156,11 @@
 
         if (parsedData.cc1101 && parsedData.cc1101 !== null) {
           const cc1101Element = document.getElementById("cc1101");
-          cc1101Element.innerHTML =
-            '<a href="#" class="list-group-item list-group-item-action fw-bold">Last 5 packets:</a>';
+          cc1101Element.innerHTML = '<a href="#" class="list-group-item list-group-item-action fw-bold">Last 5 packets:</a>';
 
           const listContent = parsedData.cc1101
             .filter((element) => element !== null)
-            .map(
-              (element) =>
-                '<a href="#" class="list-group-item list-group-item-action text-break">' +
-                JSON.stringify(element) +
-                "</a>"
-            )
+            .map((element) => '<a href="#" class="list-group-item list-group-item-action text-break">' + JSON.stringify(element) + "</a>")
             .join("");
 
           cc1101Element.innerHTML += listContent;
