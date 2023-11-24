@@ -31,7 +31,7 @@ struct wsData {
 
     String toJson() {
         // Create a JSON document
-        DynamicJsonDocument doc(4096);
+        DynamicJsonDocument doc(2048);
 
         // Add fields to the document
         doc["uptime"] = uptime;
