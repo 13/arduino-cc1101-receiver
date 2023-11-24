@@ -8,6 +8,7 @@
 #include <ESPAsyncWebServer.h>
 #include <FS.h>
 #include <ELECHOUSE_CC1101_SRC_DRV.h>
+#include "wsData.h"
 #define SPIFFS LittleFS
 #include <LittleFS.h>
 #else
@@ -26,16 +27,13 @@ uint32_t countMsg = 0;
 #endif
 
 #if defined(ESP8266)
+wsData myData;
 WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient);
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 long mqttLastReconnectAttempt = 0;
 
-//StaticJsonDocument<4096> wsJson;
-DynamicJsonDocument wsJson(4096);
-JsonObject wsJsonWifi = wsJson.createNestedObject("wifi");
-JsonArray wsJsonCc1101 = wsJson.createNestedArray("cc1101");
 int wsDataSize = 0;
 int connectedClients = 0;
 
@@ -43,12 +41,11 @@ String hostname = "esp8266-";
 
 String wsSerializeJson()
 {
-  String jsonStr;
-  wsJsonWifi["uptime"] = countMsg;
-  wsJsonWifi["rssi"] = WiFi.RSSI();
-  wsJsonWifi["memfree"] = ESP.getFreeHeap();
-  wsJsonWifi["memfrag"] = ESP.getHeapFragmentation();
-  serializeJson(wsJson, jsonStr);
+  myData.uptime = countMsg;
+  myData.rssi = WiFi.RSSI();
+  myData.memfree = ESP.getFreeHeap();
+  myData.memfrag = ESP.getHeapFragmentation();
+  String jsonStr = myData.toJson();
   Serial.print("> [WS] ");
   Serial.println(jsonStr);
   return jsonStr;
@@ -61,15 +58,16 @@ void getState()
     Serial.print("> [WiFi] IP: ");
     Serial.println(WiFi.localIP().toString());
 
-    wsJsonWifi["ip"] = WiFi.localIP().toString();
-    wsJsonWifi["mac"] = WiFi.macAddress();
-    wsJsonWifi["ssid"] = WiFi.SSID();
-    wsJsonWifi["rssi"] = WiFi.RSSI();
-    wsJsonWifi["hostname"] = WiFi.hostname();
-    wsJsonWifi["reset"] = ESP.getResetReason();
-    wsJsonWifi["uptime"] = countMsg;
-    wsJsonWifi["memfree"] = ESP.getFreeHeap();
-    wsJsonWifi["memfrag"] = ESP.getHeapFragmentation();
+    myData.ip = WiFi.localIP().toString();
+    myData.mac = WiFi.macAddress();
+    myData.ssid = WiFi.SSID();
+    myData.rssi = WiFi.RSSI();
+    myData.hostname = WiFi.hostname();
+    myData.reset = ESP.getResetReason();
+    myData.uptime = countMsg;
+    myData.memfree = ESP.getFreeHeap();
+    myData.memfrag = ESP.getHeapFragmentation();
+    myData.version = GIT_VERSION;
   }
 }
 
@@ -173,13 +171,7 @@ void connectToWiFi()
       reboot();
     }
 
-    wsJsonWifi["ip"] = WiFi.localIP().toString();
-    wsJsonWifi["mac"] = WiFi.macAddress();
-    wsJsonWifi["ssid"] = WiFi.SSID();
-    wsJsonWifi["rssi"] = WiFi.RSSI();
-    wsJsonWifi["hostname"] = WiFi.hostname();
-    wsJsonWifi["reset"] = ESP.getResetReason();
-    wsJsonWifi["version"] = GIT_VERSION;
+    getState();
   }
   else
   {
@@ -494,11 +486,7 @@ void loop()
         input_str += getUniqueID();
         // Serial.println(input_str);
 
-
-        //StaticJsonDocument<512> ccJson;
-        //DynamicJsonDocument ccJson(512);
-        JsonObject ccJson = wsJsonCc1101.createNestedObject();
-
+        StaticJsonDocument<256> ccJson;
         // Split the input string into key-value pairs using comma separator
         uint8_t pos = 0;
         while (pos < input_str.length())
@@ -559,37 +547,22 @@ void loop()
 
         // websocket
 #ifdef DEBUG
-        //wsDataSize = wsJson["cc1101"].size();
-        wsDataSize = wsJsonCc1101.size();
-        Serial.print("> [WS] wsJson size: ");
+        wsDataSize = ccJson.size();
+        Serial.print("> [WS] ccJson size: ");
         Serial.println(wsDataSize);
 #endif
 #ifdef WSPACKETS
         if (!ccJson.isNull() && ccJson.containsKey("N"))
         {
-          for (int i = MAX_SENSOR_DATA - 1; i > 0; --i)
-          {
-            if (i == MAX_SENSOR_DATA - 1)
-            {
-              //wsJson["cc1101"].remove(MAX_SENSOR_DATA - 1);
-              wsJsonCc1101.remove(MAX_SENSOR_DATA - 1);
-            }
-            //wsJson["cc1101"][i] = wsJson["cc1101"][i - 1];
-            wsJsonCc1101[i] = wsJsonCc1101[i - 1];
-          }
-          wsJsonCc1101.remove(0);
-          wsJsonCc1101[0] = ccJson;
-          //wsJson["cc1101"].remove(0);
-          //wsJson["cc1101"][0] = ccJson;
+          myData.addPacket(ccJsonStr);
         }
 #else
         if (!ccJson.isNull() && ccJson.containsKey("N"))
         {
-          wsJsonCc1101[0] = ccJson;
-          //wsJson["cc1101"].remove(0);
-          //wsJson["cc1101"][0] = ccJson;
+          myData.addPacket(ccJsonStr);
         }
 #endif
+        ccJsonStr = "";
         notifyClients();
 #endif
       } // length 0

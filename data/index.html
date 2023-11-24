@@ -52,7 +52,7 @@
                 </table>
               </div>
             </div>
-            <div class="list-group list-group-flush" id="cc1101"></div>
+            <div class="list-group list-group-flush" id="packets"></div>
           </div>
         </div>
       </div>
@@ -114,30 +114,30 @@
         const memFragElement = document.getElementById("memfrag");
 
         if (parsedData.wifi) {
-          if (parsedData.wifi.hostname) {
-            document.querySelector("title").textContent = parsedData.wifi.hostname;
-            hostnameElement.innerHTML = parsedData.wifi.hostname;
+          if (parsedData.hostname) {
+            document.querySelector("title").textContent = parsedData.hostname;
+            hostnameElement.innerHTML = parsedData.hostname;
           }
-          if (parsedData.wifi.ip) {
-            ipElement.innerHTML = parsedData.wifi.ip;
+          if (parsedData.ip) {
+            ipElement.innerHTML = parsedData.ip;
           }
-          if (parsedData.wifi.ssid) {
-            ssidElement.innerHTML = parsedData.wifi.ssid;
+          if (parsedData.ssid) {
+            ssidElement.innerHTML = parsedData.ssid;
           }
-          if (parsedData.wifi.reset) {
-            resetElement.innerHTML = parsedData.wifi.reset;
+          if (parsedData.reset) {
+            resetElement.innerHTML = parsedData.reset;
           }
-          if (parsedData.wifi.version) {
-            versionElement.innerHTML = parsedData.wifi.version;
+          if (parsedData.version) {
+            versionElement.innerHTML = parsedData.version;
           }
-          if (parsedData.wifi.memfree) {
-            memFreeElement.innerHTML = (parsedData.wifi.memfree/1024).toFixed(2) + 'KB';
+          if (parsedData.memfree) {
+            memFreeElement.innerHTML = (parsedData.memfree/1024).toFixed(2) + 'KB';
           }
-          if (parsedData.wifi.memfrag) {
-            memFragElement.innerHTML = ' (' + parsedData.wifi.memfrag + '%)';
+          if (parsedData.memfrag) {
+            memFragElement.innerHTML = ' (' + parsedData.memfrag + '%)';
           }
-          if (parsedData.wifi.uptime) {
-            const totalMinutes = parsedData.wifi.uptime;
+          if (parsedData.uptime) {
+            const totalMinutes = parsedData.uptime;
             const days = Math.floor(totalMinutes / (24 * 60));
             const totalMinutesPerDay = 24 * 60;
             const hours = Math.floor(totalMinutes / 60 - Math.floor(totalMinutes / (24 * 60)) * 24);
@@ -145,21 +145,21 @@
             const formattedUptime = `${days ? days + "d " : ""}${hours ? hours + "h " : ""}${minutes}m`;
             uptimeElement.innerHTML = formattedUptime;
           }
-          if (parsedData.wifi.rssi) {
-            rssiElement.innerHTML = parsedData.wifi.rssi;
+          if (parsedData.rssi) {
+            rssiElement.innerHTML = parsedData.rssi;
           }
         }
 
-        if (parsedData.cc1101 && parsedData.cc1101 !== null) {
-          const cc1101Element = document.getElementById("cc1101");
-          cc1101Element.innerHTML = '<a href="#" class="list-group-item list-group-item-action fw-bold">Last 5 packets:</a>';
+        if (parsedData.packets && parsedData.packets !== null) {
+          const packetsElement = document.getElementById("packets");
+          packetsElement.innerHTML = '<a href="#" class="list-group-item list-group-item-action fw-bold">Last 5 packets:</a>';
 
-          const listContent = parsedData.cc1101
+          const listContent = parsedData.packets
             .filter((element) => element !== null)
             .map((element) => '<a href="#" class="list-group-item list-group-item-action text-break">' + JSON.stringify(element) + "</a>")
             .join("");
 
-          cc1101Element.innerHTML += listContent;
+          packetsElement.innerHTML += listContent;
         }
       }
 
