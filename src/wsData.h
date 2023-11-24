@@ -54,6 +54,7 @@ struct wsData {
         // Serialize the document to a JSON string
         String jsonString;
         serializeJson(doc, jsonString);
+        //doc.~BasicJsonDocument(); // destroy
 
         return jsonString;
     }

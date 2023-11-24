@@ -562,7 +562,7 @@ void loop()
           myData.addPacket(ccJsonStr);
         }
 #endif
-        ccJsonStr = "";
+        //ccJsonStr = "";
         notifyClients();
 #endif
       } // length 0
