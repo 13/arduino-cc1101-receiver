@@ -55,9 +55,6 @@ void getState()
 {
   if (WiFi.status() == WL_CONNECTED)
   {
-    Serial.print("> [WiFi] IP: ");
-    Serial.println(WiFi.localIP().toString());
-
     myData.ip = WiFi.localIP().toString();
     myData.mac = WiFi.macAddress();
     myData.ssid = WiFi.SSID();

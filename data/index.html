@@ -4,7 +4,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title></title>
-    <link href="css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous" />
+    <link
+      href="css/bootstrap.min.css"
+      rel="stylesheet"
+      crossorigin="anonymous"
+    />
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
   </head>
 
@@ -24,7 +28,9 @@
                       <th class="ps-3">
                         <span class="labelMqtt">SSID: </span>
                       </th>
-                      <td class="text-end"><span id="ssid"></span> (<span id="rssi"></span>)</td>
+                      <td class="text-end">
+                        <span id="ssid"></span> (<span id="rssi"></span>)
+                      </td>
                     </tr>
                     <tr>
                       <th class="ps-3"><span class="labelIp">IP: </span></th>
@@ -40,7 +46,9 @@
                       <th class="ps-3">
                         <span class="labelRam">RAM: </span>
                       </th>
-                      <td class="text-end"><span id="memfree"></span><span id="memfrag"></span></td>
+                      <td class="text-end">
+                        <span id="memfree"></span><span id="memfrag"></span>
+                      </td>
                     </tr>
                     <tr>
                       <th class="ps-3">
@@ -113,50 +121,59 @@
         const memFreeElement = document.getElementById("memfree");
         const memFragElement = document.getElementById("memfrag");
 
-        if (parsedData.wifi) {
-          if (parsedData.hostname) {
-            document.querySelector("title").textContent = parsedData.hostname;
-            hostnameElement.innerHTML = parsedData.hostname;
-          }
-          if (parsedData.ip) {
-            ipElement.innerHTML = parsedData.ip;
-          }
-          if (parsedData.ssid) {
-            ssidElement.innerHTML = parsedData.ssid;
-          }
-          if (parsedData.reset) {
-            resetElement.innerHTML = parsedData.reset;
-          }
-          if (parsedData.version) {
-            versionElement.innerHTML = parsedData.version;
-          }
-          if (parsedData.memfree) {
-            memFreeElement.innerHTML = (parsedData.memfree/1024).toFixed(2) + 'KB';
-          }
-          if (parsedData.memfrag) {
-            memFragElement.innerHTML = ' (' + parsedData.memfrag + '%)';
-          }
-          if (parsedData.uptime) {
-            const totalMinutes = parsedData.uptime;
-            const days = Math.floor(totalMinutes / (24 * 60));
-            const totalMinutesPerDay = 24 * 60;
-            const hours = Math.floor(totalMinutes / 60 - Math.floor(totalMinutes / (24 * 60)) * 24);
-            const minutes = totalMinutes - hours * 60;
-            const formattedUptime = `${days ? days + "d " : ""}${hours ? hours + "h " : ""}${minutes}m`;
-            uptimeElement.innerHTML = formattedUptime;
-          }
-          if (parsedData.rssi) {
-            rssiElement.innerHTML = parsedData.rssi;
-          }
+        if (parsedData.hostname) {
+          document.querySelector("title").textContent = parsedData.hostname;
+          hostnameElement.innerHTML = parsedData.hostname;
+        }
+        if (parsedData.ip) {
+          ipElement.innerHTML = parsedData.ip;
+        }
+        if (parsedData.ssid) {
+          ssidElement.innerHTML = parsedData.ssid;
+        }
+        if (parsedData.reset) {
+          resetElement.innerHTML = parsedData.reset;
+        }
+        if (parsedData.version) {
+          versionElement.innerHTML = parsedData.version;
+        }
+        if (parsedData.memfree) {
+          memFreeElement.innerHTML =
+            (parsedData.memfree / 1024).toFixed(2) + "KB";
+        }
+        if (parsedData.memfrag) {
+          memFragElement.innerHTML = " (" + parsedData.memfrag + "%)";
+        }
+        if (parsedData.uptime) {
+          const totalMinutes = parsedData.uptime;
+          const days = Math.floor(totalMinutes / (24 * 60));
+          const totalMinutesPerDay = 24 * 60;
+          const hours = Math.floor(
+            totalMinutes / 60 - Math.floor(totalMinutes / (24 * 60)) * 24
+          );
+          const minutes = totalMinutes - hours * 60;
+          const formattedUptime = `${days ? days + "d " : ""}${
+            hours ? hours + "h " : ""
+          }${minutes}m`;
+          uptimeElement.innerHTML = formattedUptime;
+        }
+        if (parsedData.rssi) {
+          rssiElement.innerHTML = parsedData.rssi;
         }
 
-        if (parsedData.packets && parsedData.packets !== null) {
+        if (parsedData.packets && parsedData.packets !== null && parsedData.packets[0] !== "") {
           const packetsElement = document.getElementById("packets");
-          packetsElement.innerHTML = '<a href="#" class="list-group-item list-group-item-action fw-bold">Last 5 packets:</a>';
+          packetsElement.innerHTML =
+            '<a href="#" class="list-group-item list-group-item-action fw-bold">Last 5 packets:</a>';
 
           const listContent = parsedData.packets
-            .filter((element) => element !== null)
-            .map((element) => '<a href="#" class="list-group-item list-group-item-action text-break">' + JSON.stringify(element) + "</a>")
+            .filter((element) => element !== null && element !== "")
+            .map(
+              (element) =>
+                '<a href="#" class="list-group-item list-group-item-action text-break"><pre class="p-0 m-0">' +
+                element +
+                "</pre></a>"
+            )
             .join("");
 
           packetsElement.innerHTML += listContent;
