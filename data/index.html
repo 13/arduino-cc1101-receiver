@@ -20,7 +20,6 @@
           <div class="col">
             <div id="hostname" class="display-6 text-center"></div>
             <p id="desc" class="lead text-center">arduino cc1101 receiver</p>
-            <div>
               <div>
                 <table class="table table-hover mb-0">
                   <tbody>
@@ -59,7 +58,6 @@
                   </tbody>
                 </table>
               </div>
-            </div>
             <div class="list-group list-group-flush" id="packets"></div>
           </div>
         </div>
@@ -135,7 +133,7 @@
           resetElement.innerHTML = parsedData.reset;
         }
         if (parsedData.version) {
-          versionElement.innerHTML = parsedData.version;
+          versionElement.innerHTML = '<a href="/update.html" class="">' + parsedData.version + '</a>';
         }
         if (parsedData.memfree) {
           memFreeElement.innerHTML =

@@ -430,11 +430,8 @@ void setup()
   server.on("/reboot", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send(200, "application/json", "{\"status\":\"rebooting\"}");
               reboot(); });
-  server.on("/firmware.bin", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send(SPIFFS, "/firmware.bin", "application/octet-stream"); });
   server.on("/update.html", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send(LittleFS, "/update.html", "text/html"); });
-
   server.on(
       "/update", HTTP_POST, [](AsyncWebServerRequest *request)
       {
@@ -447,7 +444,9 @@ void setup()
         {
           Serial.println("Update");
           Update.runAsync(true);
-          if (!Update.begin(free_space))
+
+          int cmd = (filename.indexOf("littlefs") > -1) ? U_FS : U_FLASH;
+          if (!Update.begin(free_space, cmd))
           {
             Update.printError(Serial);
           }
