@@ -144,12 +144,12 @@
         }
         if (parsedData.uptime) {
           const totalMinutes = parsedData.uptime;
-          const days = Math.floor(totalMinutes / (24 * 60));
           const totalMinutesPerDay = 24 * 60;
+          const days = Math.floor(totalMinutes / totalMinutesPerDay);
           const hours = Math.floor(
-            totalMinutes / 60 - Math.floor(totalMinutes / (24 * 60)) * 24
+            totalMinutes / 60 - Math.floor(totalMinutes / totalMinutesPerDay) * 24
           );
-          const minutes = totalMinutes - hours * 60;
+          const minutes = totalMinutes - (hours * 60);
           const formattedUptime = `${days ? days + "d " : ""}${
             hours ? hours + "h " : ""
           }${minutes}m`;
