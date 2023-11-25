@@ -3,6 +3,7 @@
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ESP8266mDNS.h>
+#include <Updater.h>
 #include <ArduinoJson.h>
 #include <PubSubClient.h>
 #include <ESPAsyncTCP.h>
@@ -33,6 +34,7 @@ WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient);
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
+
 long mqttLastReconnectAttempt = 0;
 
 int wsDataSize = 0;
@@ -214,6 +216,50 @@ boolean connectToMqtt()
   }
   return mqttClient.connected();
 }
+
+void performFirmwareUpdate()
+{
+  // Mount LittleFS
+  if (!LittleFS.begin())
+  {
+    Serial.println("Failed to mount LittleFS.");
+    return;
+  }
+
+  // Open the firmware file in LittleFS
+  File firmwareFile = LittleFS.open("/firmware.bin", "r");
+  if (!firmwareFile)
+  {
+    Serial.println("Failed to open firmware file.");
+    return;
+  }
+
+  // Get the size of the firmware file
+  uint32_t firmwareSize = firmwareFile.size();
+
+  // Allocate a buffer to hold the firmware binary
+  uint8_t *firmwareBuffer = new uint8_t[firmwareSize];
+
+  // Read the firmware binary from the file
+  firmwareFile.readBytes((char *)firmwareBuffer, firmwareSize);
+
+  // Close the firmware file
+  firmwareFile.close();
+
+  // Perform firmware update
+  uint32_t bytesWritten = Update.write(firmwareBuffer, firmwareSize);
+  if (bytesWritten != firmwareSize)
+  {
+    Serial.println("Error updating.");
+  }
+  else
+  {
+    Serial.println("Success updating.");
+  }
+
+  delete[] firmwareBuffer;
+}
+
 #endif
 
 // cc1101
@@ -324,6 +370,10 @@ void setup()
     Serial.println(F("> [LittleFS] ERROR "));
     return;
   }
+  if (LittleFS.remove("/firmware.bin"))
+  {
+    Serial.println(F("> [LittleFS] Removed firmware.bin"));
+  }
   connectToWiFi();
   mqttClient.setServer(mqtt_server, mqtt_port);
   if (WiFi.status() == WL_CONNECTED)
@@ -364,7 +414,7 @@ void setup()
   }
 #if defined(ESP8266)
   initWebSocket();
-  // Route for root / web page
+  // Route web page
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send(LittleFS, "/index.html", String(), false, processor); });
   server.on("/css/bootstrap.min.css", HTTP_GET, [](AsyncWebServerRequest *request)
@@ -380,8 +430,47 @@ void setup()
   server.on("/reboot", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send(200, "application/json", "{\"status\":\"rebooting\"}");
               reboot(); });
-  server.on("/update", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send(200, "text/html", "<form method='POST' action='/update' enctype='multipart/form-data'><input type='file' name='update'><input type='submit' value='Update'></form>"); });
+  server.on("/firmware.bin", HTTP_GET, [](AsyncWebServerRequest *request)
+            { request->send(SPIFFS, "/firmware.bin", "application/octet-stream"); });
+  server.on("/update.html", HTTP_GET, [](AsyncWebServerRequest *request)
+            { request->send(LittleFS, "/update.html", "text/html"); });
+
+  server.on(
+      "/update", HTTP_POST, [](AsyncWebServerRequest *request)
+      {
+        AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", "File uploaded successfully");
+        request->send(response); },
+      [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final)
+      {
+        uint32_t free_space = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
+        if (!index)
+        {
+          Serial.println("Update");
+          Update.runAsync(true);
+          if (!Update.begin(free_space))
+          {
+            Update.printError(Serial);
+          }
+        }
+
+        if (Update.write(data, len) != len)
+        {
+          Update.printError(Serial);
+        }
+
+        if (final)
+        {
+          if (!Update.end(true))
+          {
+            Update.printError(Serial);
+          }
+          else
+          {
+            Serial.println("Update complete");
+            reboot();
+          }
+        }
+      });
 
   // Start server
   server.begin();
@@ -391,6 +480,7 @@ void setup()
 void loop()
 {
 #if defined(ESP8266)
+  MDNS.update();
   ws.cleanupClients();
   if (WiFi.status() != WL_CONNECTED)
   {
