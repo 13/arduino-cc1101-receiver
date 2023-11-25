@@ -2,6 +2,7 @@
 #if defined(ESP8266)
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
+#include <ESP8266mDNS.h>
 #include <ArduinoJson.h>
 #include <PubSubClient.h>
 #include <ESPAsyncTCP.h>
@@ -329,6 +330,12 @@ void setup()
   {
     connectToMqtt();
   }
+  // Initialize mDNS & OTA
+  if (!MDNS.begin(hostname))
+  {
+    Serial.println(F("> [mDNS] ERROR"));
+  }
+  MDNS.addService("http", "tcp", 80);
 #endif
   // Start CC1101
   Serial.print(F("> [CC1101] Initializing... "));
@@ -373,6 +380,9 @@ void setup()
   server.on("/reboot", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send(200, "application/json", "{\"status\":\"rebooting\"}");
               reboot(); });
+  server.on("/update", HTTP_GET, [](AsyncWebServerRequest *request)
+            { request->send(200, "text/html", "<form method='POST' action='/update' enctype='multipart/form-data'><input type='file' name='update'><input type='submit' value='Update'></form>"); });
+
   // Start server
   server.begin();
 #endif
@@ -559,7 +569,7 @@ void loop()
           myData.addPacket(ccJsonStr);
         }
 #endif
-        //ccJsonStr = "";
+        // ccJsonStr = "";
         notifyClients();
 #endif
       } // length 0
