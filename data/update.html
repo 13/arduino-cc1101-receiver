@@ -93,76 +93,15 @@
 
         // Store references to frequently accessed elements
         const hostnameElement = document.getElementById("hostname");
-        const ipElement = document.getElementById("ip");
-        const ssidElement = document.getElementById("ssid");
-        const resetElement = document.getElementById("reset");
         const versionElement = document.getElementById("version");
-        const uptimeElement = document.getElementById("uptime");
-        const rssiElement = document.getElementById("rssi");
-        const memFreeElement = document.getElementById("memfree");
-        const memFragElement = document.getElementById("memfrag");
 
         if (parsedData.hostname) {
           document.querySelector("title").textContent = parsedData.hostname;
           hostnameElement.innerHTML = parsedData.hostname;
         }
-        if (parsedData.ip) {
-          ipElement.innerHTML = parsedData.ip;
-        }
-        if (parsedData.ssid) {
-          ssidElement.innerHTML = parsedData.ssid;
-        }
-        if (parsedData.reset) {
-          resetElement.innerHTML = parsedData.reset;
-        }
         if (parsedData.version) {
           versionElement.innerHTML =
             '<a href="/update.html" class="">' + parsedData.version + "</a>";
-        }
-        if (parsedData.memfree) {
-          memFreeElement.innerHTML =
-            (parsedData.memfree / 1024).toFixed(2) + "KB";
-        }
-        if (parsedData.memfrag) {
-          memFragElement.innerHTML = " (" + parsedData.memfrag + "%)";
-        }
-        if (parsedData.uptime) {
-          const totalMinutes = parsedData.uptime;
-          const days = Math.floor(totalMinutes / (24 * 60));
-          const totalMinutesPerDay = 24 * 60;
-          const hours = Math.floor(
-            totalMinutes / 60 - Math.floor(totalMinutes / (24 * 60)) * 24
-          );
-          const minutes = totalMinutes - hours * 60;
-          const formattedUptime = `${days ? days + "d " : ""}${
-            hours ? hours + "h " : ""
-          }${minutes}m`;
-          uptimeElement.innerHTML = formattedUptime;
-        }
-        if (parsedData.rssi) {
-          rssiElement.innerHTML = parsedData.rssi;
-        }
-
-        if (
-          parsedData.packets &&
-          parsedData.packets !== null &&
-          parsedData.packets[0] !== ""
-        ) {
-          const packetsElement = document.getElementById("packets");
-          packetsElement.innerHTML =
-            '<a href="#" class="list-group-item list-group-item-action fw-bold">Last 5 packets:</a>';
-
-          const listContent = parsedData.packets
-            .filter((element) => element !== null && element !== "")
-            .map(
-              (element) =>
-                '<a href="#" class="list-group-item list-group-item-action text-break">' +
-                element +
-                "</a>"
-            )
-            .join("");
-
-          packetsElement.innerHTML += listContent;
         }
       }
 

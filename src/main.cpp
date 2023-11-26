@@ -217,49 +217,6 @@ boolean connectToMqtt()
   return mqttClient.connected();
 }
 
-void performFirmwareUpdate()
-{
-  // Mount LittleFS
-  if (!LittleFS.begin())
-  {
-    Serial.println("Failed to mount LittleFS.");
-    return;
-  }
-
-  // Open the firmware file in LittleFS
-  File firmwareFile = LittleFS.open("/firmware.bin", "r");
-  if (!firmwareFile)
-  {
-    Serial.println("Failed to open firmware file.");
-    return;
-  }
-
-  // Get the size of the firmware file
-  uint32_t firmwareSize = firmwareFile.size();
-
-  // Allocate a buffer to hold the firmware binary
-  uint8_t *firmwareBuffer = new uint8_t[firmwareSize];
-
-  // Read the firmware binary from the file
-  firmwareFile.readBytes((char *)firmwareBuffer, firmwareSize);
-
-  // Close the firmware file
-  firmwareFile.close();
-
-  // Perform firmware update
-  uint32_t bytesWritten = Update.write(firmwareBuffer, firmwareSize);
-  if (bytesWritten != firmwareSize)
-  {
-    Serial.println("Error updating.");
-  }
-  else
-  {
-    Serial.println("Success updating.");
-  }
-
-  delete[] firmwareBuffer;
-}
-
 #endif
 
 // cc1101
@@ -439,13 +396,27 @@ void setup()
         request->send(response); },
       [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final)
       {
-        uint32_t free_space = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
         if (!index)
         {
-          Serial.println("Update");
+          Serial.print(F("> [OTA] Updating ... "));
+          Serial.println(filename);
           Update.runAsync(true);
+          uint32_t free_space;
+          int cmd;
 
-          int cmd = (filename.indexOf("littlefs") > -1) ? U_FS : U_FLASH;
+          if (filename.indexOf("littlefs") > -1)
+          {
+            FSInfo fs_info;
+            LittleFS.info(fs_info);
+            free_space = fs_info.totalBytes;
+            cmd = U_FS;
+          }
+          else
+          {
+            free_space = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
+            cmd = U_FLASH;
+          }
+
           if (!Update.begin(free_space, cmd))
           {
             Update.printError(Serial);
@@ -465,7 +436,7 @@ void setup()
           }
           else
           {
-            Serial.println("Update complete");
+            Serial.println(F("> [OTA] Successful"));
             reboot();
           }
         }
