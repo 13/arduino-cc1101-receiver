@@ -274,65 +274,81 @@ void setup()
             { request->send(LittleFS, "/favicon.ico", "image/x-icon"); });
   server.on("/ip", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send_P(200, "text/plain", myData.ip.c_str()); });
+  server.on("/ping", HTTP_GET, [](AsyncWebServerRequest *request)
+            { request->send(200, "text/plain", "pong"); });
   server.on("/json", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send(200, "application/json", wsSerializeJson()); });
   server.on("/reboot", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send(200, "application/json", "{\"status\":\"rebooting\"}");
+            { 
+              AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "{\"reboot\":true}");
+              response->addHeader("Connection", "close");
+              request->send(response);
               reboot(); });
   server.on("/update.html", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send(LittleFS, "/update.html", "text/html"); });
-  server.on(
-      "/update", HTTP_POST, [](AsyncWebServerRequest *request)
-      {
-        AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", "File uploaded successfully");
-        request->send(response); },
-      [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final)
-      {
-        if (!index)
-        {
+  server.on("/update", HTTP_GET, [](AsyncWebServerRequest *request)
+            { request->send(LittleFS, "/update.html", "text/html"); });
+  server.on("/update", HTTP_POST, [](AsyncWebServerRequest *request)
+            {
+  // Check if the request has a file upload
+  if (request->hasParam("file", true)) {
+    AsyncWebParameter *file = request->getParam("file", true);
+    String filename = file->value();
+
+    // Check the file extension
+    if (filename.endsWith(".bin") || filename.endsWith(".bin.gz")) {
+      AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "{\"success\":true,\"message\":\"Updated successfully!\",\"version\":\"v1.0\"}");
+      response->addHeader("Connection", "close");
+      request->send(response);
+
+      // Your existing file update logic here...
+      [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
+        if (!index) {
           Serial.print(F("> [OTA] Updating ... "));
           Serial.println(filename);
           Update.runAsync(true);
           uint32_t free_space;
           int cmd;
 
-          if (filename.indexOf("littlefs") > -1)
-          {
+          if (filename.indexOf("littlefs") > -1) {
             FSInfo fs_info;
             LittleFS.info(fs_info);
             free_space = fs_info.totalBytes;
             cmd = U_FS;
-          }
-          else
-          {
+          } else {
             free_space = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
             cmd = U_FLASH;
           }
 
-          if (!Update.begin(free_space, cmd))
-          {
+          if (!Update.begin(free_space, cmd)) {
             Update.printError(Serial);
           }
         }
 
-        if (Update.write(data, len) != len)
-        {
+        if (Update.write(data, len) != len) {
           Update.printError(Serial);
         }
 
-        if (final)
-        {
-          if (!Update.end(true))
-          {
+        if (final) {
+          if (!Update.end(true)) {
             Update.printError(Serial);
-          }
-          else
-          {
+          } else {
             Serial.println(F("> [OTA] Successful"));
-            reboot();
           }
         }
-      });
+      };
+    } else {
+      // Invalid file extension
+      AsyncWebServerResponse *response = request->beginResponse(400, "application/json", "{\"success\":false,\"message\":\"Invalid file extension\",\"version\":\"v1.0\"}");
+      response->addHeader("Connection", "close");
+      request->send(response);
+    }
+  } else {
+    // No file parameter in the request
+    AsyncWebServerResponse *response = request->beginResponse(400, "application/json", "{\"success\":false,\"message\":\"No file in the request\",\"version\":\"v1.0\"}");
+    response->addHeader("Connection", "close");
+    request->send(response);
+  } });
 
   // Start server
   server.begin();

@@ -22,6 +22,7 @@
             <p id="desc" class="lead text-center">arduino cc1101 receiver</p>
             <div class="d-grid gap-2 col-6 mx-auto">
               <form
+                id="updateForm"
                 action="/update"
                 method="post"
                 enctype="multipart/form-data"
@@ -42,6 +43,31 @@
               <a href="/reboot" class="btn btn-secondary mb-5">Reboot</a>
               <a href="/" class="btn btn-primary">Back</a>
             </div>
+            <div id="updateStatus" class="mt-3"></div>
+            <!-- Bootstrap Modal -->
+            <div
+              class="modal fade"
+              id="updateModal"
+              tabindex="-1"
+              aria-labelledby="updateModalLabel"
+              aria-hidden="true"
+            >
+              <div class="modal-dialog">
+                <div class="modal-content">
+                  <div class="modal-body text-center">
+                    <div
+                      id="loadingSpinner"
+                      class="spinner-border"
+                      role="status"
+                    >
+                      <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p id="updateModalMessage" class="m-0">Updating...</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- End Bootstrap Modal -->
           </div>
         </div>
       </div>
@@ -94,6 +120,10 @@
         // Store references to frequently accessed elements
         const hostnameElement = document.getElementById("hostname");
         const versionElement = document.getElementById("version");
+        const updateStatusElement = document.getElementById("updateStatus");
+        const updateModalMessage =
+          document.getElementById("updateModalMessage");
+        const loadingSpinner = document.getElementById("loadingSpinner");
 
         if (parsedData.hostname) {
           document.querySelector("title").textContent = parsedData.hostname;
@@ -105,10 +135,136 @@
         }
       }
 
+      function performFirmwareUpdate(event) {
+        event.preventDefault();
+
+        // Display the Bootstrap modal when the firmware update starts
+        showUpdateModal();
+
+        // Assuming you have a form with the ID "updateForm"
+        const form = document.getElementById("updateForm");
+        const formData = new FormData(form);
+
+        // Display the loading spinner while the update is in progress
+        const loadingSpinner = document.getElementById("loadingSpinner");
+
+        fetch("/update", {
+          method: "POST",
+          body: formData,
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            // Check if the firmware update was successful
+            if (data.success) {
+              // Update the content of the modal with the success message and set the color to green
+              const updateModalMessage =
+                document.getElementById("updateModalMessage");
+              updateModalMessage.innerHTML = `<p class="text-success m-0">${data.message}</p><p class="m-0">Rebooting...</p>`;
+              // Trigger a reboot after a successful update
+              fetch("/reboot")
+                .then(() => {
+                  console.log("response");
+                  //.then(() => {
+                  // Wait for the ESP to come back online
+                  checkESPOnline();
+                })
+                .catch((error) => {
+                  console.error("Reboot failed:", error);
+                  setTimeout(() => {
+                    checkESPOnline();
+                  }, 20000);
+                  /*console.log("Reloading...");
+                  setTimeout(hideUpdateModal, 18000);
+                  setTimeout(() => {
+                    window.location.href = window.location.href;
+                  }, 20000);*/
+                });
+            } else {
+              // Update the content of the modal with the error message and set the color to red
+              const updateModalMessage =
+                document.getElementById("updateModalMessage");
+              updateModalMessage.innerHTML = `<p class="text-danger m-0">Error: ${data.message}</p>`;
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            // Update the content of the modal with the error message and set the color to red
+            const updateModalMessage =
+              document.getElementById("updateModalMessage");
+            updateModalMessage.innerHTML =
+              '<p class="text-danger m-0">Update failed</p>';
+            // If there was an error, hide the modal immediately
+            setTimeout(hideUpdateModal, 2000);
+          });
+      }
+
+      // Function to check if the ESP is back online
+      function checkESPOnline() {
+        const checkInterval = 2000; // Adjust as needed
+        const maxAttempts = 60; // Adjust as needed
+        let attempt = 0;
+
+        function check() {
+          fetch("/ping") // Assuming there is an endpoint to check if the ESP is online (replace with your actual endpoint)
+            .then((response) => {
+              if (response.ok) {
+                console.log("online");
+                // ESP is back online
+                hideUpdateModal();
+                setTimeout(() => {
+                  window.location.href = window.location.href;
+                }, 2000);
+              } else {
+                attempt++;
+                if (attempt < maxAttempts) {
+                  // Retry after a short delay
+                  setTimeout(check, checkInterval);
+                } else {
+                  console.error("Max attempts reached. ESP may not be online.");
+                  // If max attempts reached, hide the modal
+                  hideUpdateModal();
+                }
+              }
+            })
+            .catch((error) => {
+              console.error("Error checking ESP online:", error);
+              // Retry after a short delay
+              setTimeout(check, checkInterval);
+            });
+        }
+
+        // Start checking
+        check();
+      }
+
+      // Function to display the Bootstrap modal
+      function showUpdateModal() {
+        var updateModal = new bootstrap.Modal(
+          document.getElementById("updateModal"),
+          {
+            backdrop: "static", // Prevent closing by clicking outside the modal
+            keyboard: false, // Prevent closing with the keyboard
+          }
+        );
+        updateModal.show();
+      }
+
+      // Function to hide the Bootstrap modal
+      function hideUpdateModal() {
+        const hideModal = bootstrap.Modal.getInstance(
+          document.getElementById("updateModal")
+        );
+        hideModal.hide();
+      }
+
       window.addEventListener("load", onLoad);
 
       function onLoad(event) {
         initWebSocket();
+
+        // Assuming you have a form with the ID "updateForm"
+        const updateForm = document.getElementById("updateForm");
+        updateForm.addEventListener("submit", performFirmwareUpdate);
       }
     </script>
   </body>
