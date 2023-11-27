@@ -3,7 +3,7 @@
 // Reboot
 void reboot()
 {
-  Serial.println("> [System] Reboot...");
+  Serial.println("> [System] Rebooting...");
   delay(200);
   ESP.restart();
 }

@@ -162,10 +162,11 @@
               updateModalMessage.innerHTML = `<p class="text-success m-0">${data.message}</p><p class="m-0">Rebooting...</p>`;
               // Trigger a reboot after a successful update
               fetch("/reboot")
-                .then(() => {
-                  console.log("response");
-                  //.then(() => {
-                  // Wait for the ESP to come back online
+                .then((response) => {
+                  checkESPOnline();
+                })
+                .then((data) => {
+                  console.log("Reboot result:", data);
                   checkESPOnline();
                 })
                 .catch((error) => {

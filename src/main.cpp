@@ -279,11 +279,19 @@ void setup()
   server.on("/json", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send(200, "application/json", wsSerializeJson()); });
   server.on("/reboot", HTTP_GET, [](AsyncWebServerRequest *request)
-            { 
-              AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "{\"reboot\":true}");
-              response->addHeader("Connection", "close");
-              request->send(response);
-              reboot(); });
+            {
+          AsyncWebServerResponse *response;
+          if (myData.uptime > 2) {
+            response = request->beginResponse(200, "application/json", "{\"reboot\":true,\"message\":\"Rebooting...\"}");
+            response->addHeader("Connection", "close");
+            request->send(response);
+            Serial.println(F("> [HTTP] Rebooting..."));
+            reboot();
+          } else {
+            response = request->beginResponse(200, "application/json", "{\"reboot\":false,\"message\":\"Uptime less than or equal to 2, not rebooting.\"}");
+            response->addHeader("Connection", "close");
+            request->send(response);
+          }});
   server.on("/update.html", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send(LittleFS, "/update.html", "text/html"); });
   server.on(
