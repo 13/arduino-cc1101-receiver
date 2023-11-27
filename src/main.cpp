@@ -3,6 +3,12 @@
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ESP8266mDNS.h>
+#endif
+#if defined(ESP32)
+#include <WiFi.h>
+#include <ESPmDNS.h>
+#endif
+#if defined(ESP8266) || defined(ESP32)
 #include <Updater.h>
 #include <ArduinoJson.h>
 #include <PubSubClient.h>
@@ -29,9 +35,15 @@ uint32_t countMsg = 0;
 #endif
 
 #if defined(ESP8266)
-wsData myData;
+String hostname = "esp8266-";
+#endif
+#if defined(ESP32)
+String hostname = "esp32-";
+#endif
+#if defined(ESP8266) || defined(ESP32)
 WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient);
+wsData myData;
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 
@@ -39,8 +51,6 @@ long mqttLastReconnectAttempt = 0;
 
 int wsDataSize = 0;
 int connectedClients = 0;
-
-String hostname = "esp8266-";
 
 String wsSerializeJson()
 {
@@ -226,7 +236,7 @@ const uint8_t byteArrSize = 61;
 String getUniqueID()
 {
   String uid = "0";
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
   uid = WiFi.macAddress().substring(12);
   uid.replace(":", "");
 #else
@@ -282,7 +292,7 @@ void printMARK()
     }
     countMsg++;
     lastMillis += INTERVAL_1MIN;
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
     // 1 minute status update
     connectToMqtt();
     notifyClients();
@@ -305,7 +315,7 @@ void setup()
   Serial.println(GIT_VERSION);
   Serial.print(F("> Node ID: "));
   Serial.println(getUniqueID());
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
   hostname += getUniqueID();
 #endif
 #ifdef VERBOSE
@@ -320,7 +330,7 @@ void setup()
 #endif
   Serial.println();
 #endif
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
   // Initialize LittleFS
   if (!LittleFS.begin())
   {
@@ -362,14 +372,14 @@ void setup()
   {
     Serial.print(F("ERR "));
     Serial.println(cc_state);
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
     reboot();
 #else
     while (true)
       ;
 #endif
   }
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
   initWebSocket();
   // Route web page
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
@@ -449,7 +459,7 @@ void setup()
 
 void loop()
 {
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
   MDNS.update();
   ws.cleanupClients();
   if (WiFi.status() != WL_CONNECTED)
@@ -519,7 +529,7 @@ void loop()
       Serial.print(F("> [CC1101] Length: "));
       Serial.println(byteArrLen);
 #endif
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
       String input_str = "";
 #endif
       if (byteArrLen > 0 && byteArrLen <= byteArrSize)
@@ -533,7 +543,7 @@ void loop()
               byteArr[i] == ',' || byteArr[i] == ':' || byteArr[i] == '-')
           {
             Serial.print((char)byteArr[i]);
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
             input_str += (char)byteArr[i];
 #endif
           }
@@ -544,7 +554,7 @@ void loop()
         Serial.print(lqi);
         Serial.print(F(",RN:"));
         Serial.println(getUniqueID());
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
         input_str += ",RSSI:";
         input_str += String(rssi);
         input_str += ",LQI:";
