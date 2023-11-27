@@ -172,18 +172,14 @@
                   console.error("Reboot failed:", error);
                   setTimeout(() => {
                     checkESPOnline();
-                  }, 20000);
-                  /*console.log("Reloading...");
-                  setTimeout(hideUpdateModal, 18000);
-                  setTimeout(() => {
-                    window.location.href = window.location.href;
-                  }, 20000);*/
+                  }, 10000);
                 });
             } else {
               // Update the content of the modal with the error message and set the color to red
               const updateModalMessage =
                 document.getElementById("updateModalMessage");
               updateModalMessage.innerHTML = `<p class="text-danger m-0">Error: ${data.message}</p>`;
+              setTimeout(hideUpdateModal, 5000);
             }
           })
           .catch((error) => {
@@ -194,7 +190,7 @@
             updateModalMessage.innerHTML =
               '<p class="text-danger m-0">Update failed</p>';
             // If there was an error, hide the modal immediately
-            setTimeout(hideUpdateModal, 2000);
+            setTimeout(hideUpdateModal, 5000);
           });
       }
 

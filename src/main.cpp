@@ -286,69 +286,70 @@ void setup()
               reboot(); });
   server.on("/update.html", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send(LittleFS, "/update.html", "text/html"); });
-  server.on("/update", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send(LittleFS, "/update.html", "text/html"); });
-  server.on("/update", HTTP_POST, [](AsyncWebServerRequest *request)
-            {
-  // Check if the request has a file upload
-  if (request->hasParam("file", true)) {
-    AsyncWebParameter *file = request->getParam("file", true);
-    String filename = file->value();
+  server.on(
+      "/update", HTTP_POST, [](AsyncWebServerRequest *request)
+      {
+    AsyncWebServerResponse *response;
 
-    // Check the file extension
-    if (filename.endsWith(".bin") || filename.endsWith(".bin.gz")) {
-      AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "{\"success\":true,\"message\":\"Updated successfully!\",\"version\":\"v1.0\"}");
-      response->addHeader("Connection", "close");
-      request->send(response);
+    if (!Update.hasError())
+    {
+        response = request->beginResponse(200, "application/json", "{\"success\":true,\"message\":\"Updated successfully!\",\"version\":\"v1.0\"}");
+        Serial.println(F("> [OTA] Successful"));
+    }
+    else
+    {
+        response = request->beginResponse(500, "application/json", "{\"success\":false,\"message\":\"Update failed\",\"version\":\"v1.0\"}");
+        Serial.println(F("> [OTA] Update failed"));
+    }
 
-      // Your existing file update logic here...
-      [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
-        if (!index) {
-          Serial.print(F("> [OTA] Updating ... "));
+    response->addHeader("Connection", "close");
+    request->send(response); },
+      [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final)
+      {
+        if (!index)
+        {
+          Serial.print(F("> [OTA] Updating... "));
           Serial.println(filename);
           Update.runAsync(true);
           uint32_t free_space;
           int cmd;
 
-          if (filename.indexOf("littlefs") > -1) {
+          if (filename.indexOf("littlefs") > -1)
+          {
             FSInfo fs_info;
             LittleFS.info(fs_info);
             free_space = fs_info.totalBytes;
             cmd = U_FS;
-          } else {
+          }
+          else
+          {
             free_space = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
             cmd = U_FLASH;
           }
 
-          if (!Update.begin(free_space, cmd)) {
+          if (!Update.begin(free_space, cmd))
+          {
             Update.printError(Serial);
           }
         }
 
-        if (Update.write(data, len) != len) {
+        if (Update.write(data, len) != len)
+        {
           Update.printError(Serial);
         }
 
-        if (final) {
-          if (!Update.end(true)) {
+        if (final)
+        {
+          if (!Update.end(true))
+          {
             Update.printError(Serial);
-          } else {
+          }
+          else
+          {
             Serial.println(F("> [OTA] Successful"));
           }
         }
-      };
-    } else {
-      // Invalid file extension
-      AsyncWebServerResponse *response = request->beginResponse(400, "application/json", "{\"success\":false,\"message\":\"Invalid file extension\",\"version\":\"v1.0\"}");
-      response->addHeader("Connection", "close");
-      request->send(response);
-    }
-  } else {
-    // No file parameter in the request
-    AsyncWebServerResponse *response = request->beginResponse(400, "application/json", "{\"success\":false,\"message\":\"No file in the request\",\"version\":\"v1.0\"}");
-    response->addHeader("Connection", "close");
-    request->send(response);
-  } });
+      });
 
   // Start server
   server.begin();
