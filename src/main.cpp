@@ -17,6 +17,7 @@
 #include <FS.h>
 #include <ELECHOUSE_CC1101_SRC_DRV.h>
 #include "wsData.h"
+#include "helpers.h"
 #define SPIFFS LittleFS
 #include <LittleFS.h>
 #else
@@ -51,35 +52,6 @@ long mqttLastReconnectAttempt = 0;
 
 int wsDataSize = 0;
 int connectedClients = 0;
-
-void getState()
-{
-  if (WiFi.status() == WL_CONNECTED)
-  {
-    myData.ip = WiFi.localIP().toString();
-    myData.mac = WiFi.macAddress();
-    myData.ssid = WiFi.SSID();
-    myData.rssi = WiFi.RSSI();
-    myData.hostname = WiFi.hostname();
-    myData.reset = ESP.getResetReason();
-    myData.uptime = countMsg;
-    myData.memfree = ESP.getFreeHeap();
-    myData.memfrag = ESP.getHeapFragmentation();
-    myData.version = GIT_VERSION;
-  }
-}
-
-String getIP()
-{
-  return String(WiFi.localIP().toString());
-}
-
-void reboot()
-{
-  Serial.println("> [System] Reboot...");
-  delay(1000);
-  ESP.restart();
-}
 
 // Websocket
 String wsSerializeJson()
@@ -141,85 +113,6 @@ void initWebSocket()
   ws.onEvent(onEvent);
   server.addHandler(&ws);
 }
-
-void connectToWiFi()
-{
-  WiFi.disconnect();
-  WiFi.mode(WIFI_STA); // switch off AP
-  WiFi.setAutoConnect(true);
-  WiFi.setAutoReconnect(true);
-  WiFi.hostname(hostname);
-  WiFi.begin(wifi_ssid, wifi_pass);
-  Serial.print("> [WiFi] Connecting...");
-  for (int i = 0; i < 20; i++)
-  {
-    if (WiFi.status() == WL_CONNECTED)
-    {
-      Serial.println(" OK");
-      break;
-    }
-    Serial.print(".");
-    delay(1000);
-  }
-  if (WiFi.status() == WL_CONNECTED)
-  {
-    Serial.print("> [WiFi] IP: ");
-    Serial.println(WiFi.localIP().toString());
-
-    if (WiFi.localIP() == IPAddress(0, 0, 0, 0))
-    {
-      Serial.println(" NO DHCP LEASE");
-      reboot();
-    }
-
-    getState();
-  }
-  else
-  {
-    Serial.println(" ERR TIMEOUT");
-    reboot();
-  }
-}
-
-// MQTT
-boolean connectToMqtt()
-{
-
-  String lastWillTopic = mqtt_topic_lwt;
-  lastWillTopic += "/";
-  lastWillTopic += hostname;
-  String ipTopic = lastWillTopic;
-  ipTopic += "/IP";
-  String versionTopic = lastWillTopic;
-  versionTopic += "/VERSION";
-  lastWillTopic += "/LWT";
-
-  if (!mqttClient.connected())
-  {
-    Serial.print("> [MQTT] Connecting...");
-    if (mqttClient.connect(hostname.c_str(), lastWillTopic.c_str(), 1, true, "offline"))
-    {
-      Serial.println(" OK");
-      mqttClient.publish(lastWillTopic.c_str(), "online", true);
-      mqttClient.publish(ipTopic.c_str(), WiFi.localIP().toString().c_str(), true);
-      mqttClient.publish(versionTopic.c_str(), GIT_VERSION, true);
-    }
-    else
-    {
-      Serial.print(" failed, rc=");
-      Serial.println(mqttClient.state());
-    }
-  }
-  else
-  {
-    // Serial.println("> [MQTT] Connected");
-    mqttClient.publish(lastWillTopic.c_str(), "online", true);
-    mqttClient.publish(ipTopic.c_str(), WiFi.localIP().toString().c_str(), true);
-    mqttClient.publish(versionTopic.c_str(), GIT_VERSION, true);
-  }
-  return mqttClient.connected();
-}
-
 #endif
 
 // cc1101
@@ -328,11 +221,7 @@ void setup()
   if (!LittleFS.begin())
   {
     Serial.println(F("> [LittleFS] ERROR "));
-    return;
-  }
-  if (LittleFS.remove("/firmware.bin"))
-  {
-    Serial.println(F("> [LittleFS] Removed firmware.bin"));
+    reboot();
   }
   connectToWiFi();
   mqttClient.setServer(mqtt_server, mqtt_port);
@@ -353,13 +242,13 @@ void setup()
   if (cc_state)
   {
     Serial.println(F("OK"));
-    ELECHOUSE_cc1101.Init();           // must be set to initialize the cc1101!
-    ELECHOUSE_cc1101.setCCMode(1);     // set config for internal transmission mode.
-    ELECHOUSE_cc1101.setModulation(0); // set modulation mode. 0 = 2-FSK, 1 = GFSK, 2 = ASK/OOK, 3 = 4-FSK, 4 = MSK.
-    ELECHOUSE_cc1101.setMHZ(CC_FREQ);  // Here you can set your basic frequency. The lib calculates the frequency automatically (default = 433.92).The cc1101 can: 300-348 MHZ, 387-464MHZ and 779-928MHZ. Read More info from datasheet.
-    // ELECHOUSE_cc1101.setPA(CC_POWER);  // Set TxPower. The following settings are possible depending on the frequency band.  (-30  -20  -15  -10  -6    0    5    7    10   11   12) Default is max!
-    ELECHOUSE_cc1101.setSyncMode(2); // Combined sync-word qualifier mode. 0 = No preamble/sync. 1 = 16 sync word bits detected. 2 = 16/16 sync word bits detected. 3 = 30/32 sync word bits detected. 4 = No preamble/sync, carrier-sense above threshold. 5 = 15/16 + carrier-sense above threshold. 6 = 16/16 + carrier-sense above threshold. 7 = 30/32 + carrier-sense above threshold.
-    ELECHOUSE_cc1101.setCrc(1);      // 1 = CRC calculation in TX and CRC check in RX enabled. 0 = CRC disabled for TX and RX.
+    ELECHOUSE_cc1101.Init();
+    ELECHOUSE_cc1101.setCCMode(1);
+    ELECHOUSE_cc1101.setModulation(0);
+    ELECHOUSE_cc1101.setMHZ(CC_FREQ);
+    // ELECHOUSE_cc1101.setPA(CC_POWER);
+    ELECHOUSE_cc1101.setSyncMode(2);
+    ELECHOUSE_cc1101.setCrc(1);
   }
   else
   {
@@ -384,7 +273,7 @@ void setup()
   server.on("/favicon.ico", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send(LittleFS, "/favicon.ico", "image/x-icon"); });
   server.on("/ip", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send_P(200, "text/plain", getIP().c_str()); });
+            { request->send_P(200, "text/plain", myData.ip.c_str()); });
   server.on("/json", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send(200, "application/json", wsSerializeJson()); });
   server.on("/reboot", HTTP_GET, [](AsyncWebServerRequest *request)
