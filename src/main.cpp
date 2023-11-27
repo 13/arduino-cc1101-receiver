@@ -52,18 +52,6 @@ long mqttLastReconnectAttempt = 0;
 int wsDataSize = 0;
 int connectedClients = 0;
 
-String wsSerializeJson()
-{
-  myData.uptime = countMsg;
-  myData.rssi = WiFi.RSSI();
-  myData.memfree = ESP.getFreeHeap();
-  myData.memfrag = ESP.getHeapFragmentation();
-  String jsonStr = myData.toJson();
-  Serial.print("> [WS] ");
-  Serial.println(jsonStr);
-  return jsonStr;
-}
-
 void getState()
 {
   if (WiFi.status() == WL_CONNECTED)
@@ -91,6 +79,19 @@ void reboot()
   Serial.println("> [System] Reboot...");
   delay(1000);
   ESP.restart();
+}
+
+// Websocket
+String wsSerializeJson()
+{
+  myData.uptime = countMsg;
+  myData.rssi = WiFi.RSSI();
+  myData.memfree = ESP.getFreeHeap();
+  myData.memfrag = ESP.getHeapFragmentation();
+  String jsonStr = myData.toJson();
+  Serial.print("> [WS] ");
+  Serial.println(jsonStr);
+  return jsonStr;
 }
 
 void notifyClients()
@@ -141,16 +142,6 @@ void initWebSocket()
   server.addHandler(&ws);
 }
 
-String processor(const String &var)
-{
-  Serial.println(var);
-  if (var == "ip")
-  {
-    return getIP();
-  }
-  return String();
-}
-
 void connectToWiFi()
 {
   WiFi.disconnect();
@@ -189,6 +180,8 @@ void connectToWiFi()
     reboot();
   }
 }
+
+// MQTT
 boolean connectToMqtt()
 {
 
@@ -383,7 +376,7 @@ void setup()
   initWebSocket();
   // Route web page
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send(LittleFS, "/index.html", String(), false, processor); });
+            { request->send(LittleFS, "/index.html", "text/html"); });
   server.on("/css/bootstrap.min.css", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send(LittleFS, "/css/bootstrap.min.css", "text/css"); });
   server.on("/js/bootstrap.bundle.min.js", HTTP_GET, [](AsyncWebServerRequest *request)
