@@ -51,6 +51,11 @@ LQI = Signal quality
 RN = receiver node id
 ```
 
+#### Features
+- Websocket
+- mDNS
+- OTA Update
+
 ### Built With
 
 * [VSCode](https://github.com/microsoft/vscode)
