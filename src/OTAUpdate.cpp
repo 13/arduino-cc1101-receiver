@@ -4,10 +4,11 @@
 #define SPIFFS LittleFS
 #include <LittleFS.h>
 
-void OTAUpdater::update(const String& filename, const uint8_t* data, size_t len, bool final) {
-  if (filename.isEmpty())
+void OTAUpdater::update(const String &filename, size_t index, const uint8_t *data, size_t len, bool final)
+{
+  if (!index)
   {
-    Serial.print(F("> [OTA] Updating ... "));
+    Serial.print(F("> [OTA] Updating... "));
     Serial.println(filename);
     Update.runAsync(true);
     uint32_t free_space;
@@ -32,7 +33,7 @@ void OTAUpdater::update(const String& filename, const uint8_t* data, size_t len,
     }
   }
 
-  if (Update.write(const_cast<uint8_t*>(data), len) != len)
+  if (Update.write(const_cast<uint8_t *>(data), len) != len)
   {
     Update.printError(Serial);
   }

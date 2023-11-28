@@ -3,9 +3,10 @@
 
 #include <Arduino.h>
 
-class OTAUpdater {
+class OTAUpdater
+{
 public:
-  static void update(const String& filename, const uint8_t* data, size_t len, bool final);
+  static void update(const String &filename, size_t index, const uint8_t *data, size_t len, bool final);
 };
 
 #endif // OTA_UPDATE_H

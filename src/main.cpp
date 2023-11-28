@@ -9,6 +9,7 @@
 #include <ESPmDNS.h>
 #endif
 #include <Updater.h>
+#include "OTAUpdate.h"
 #include <ArduinoJson.h>
 #include <PubSubClient.h>
 #include <ESPAsyncTCP.h>
@@ -43,171 +44,12 @@ PubSubClient mqttClient(wifiClient);
 wsData myData;
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
+OTAUpdater otaUpdater;
 
 long mqttLastReconnectAttempt = 0;
 
 int wsDataSize = 0;
-int connectedClients = 0;
-
-// Websocket
-String wsSerializeJson()
-{
-  myData.uptime = countMsg;
-  myData.rssi = WiFi.RSSI();
-  myData.memfree = ESP.getFreeHeap();
-  myData.memfrag = ESP.getHeapFragmentation();
-  String jsonStr = myData.toJson();
-  Serial.print("> [WS] ");
-  Serial.println(jsonStr);
-  return jsonStr;
-}
-
-void notifyClients()
-{
-  if (connectedClients > 0)
-  {
-    ws.textAll(wsSerializeJson());
-  }
-}
-
-void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
-{
-  AwsFrameInfo *info = (AwsFrameInfo *)arg;
-  if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT)
-  {
-    data[len] = 0;
-    notifyClients();
-  }
-}
-
-void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type,
-             void *arg, uint8_t *data, size_t len)
-{
-  switch (type)
-  {
-  case WS_EVT_CONNECT:
-    Serial.printf("> [WebSocket] Client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
-    connectedClients++;
-    getState();
-    notifyClients();
-    break;
-  case WS_EVT_DISCONNECT:
-    Serial.printf("> [WebSocket] Client #%u disconnected\n", client->id());
-    connectedClients--;
-    break;
-  case WS_EVT_DATA:
-    handleWebSocketMessage(arg, data, len);
-    break;
-  case WS_EVT_PONG:
-  case WS_EVT_ERROR:
-    break;
-  }
-}
-
-void initWebSocket()
-{
-  ws.onEvent(onEvent);
-  server.addHandler(&ws);
-
-  // Route web page
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send(LittleFS, "/index.html", "text/html"); });
-  server.on("/css/bootstrap.min.css", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send(LittleFS, "/css/bootstrap.min.css", "text/css"); });
-  server.on("/js/bootstrap.bundle.min.js", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send(LittleFS, "/js/bootstrap.bundle.min.js", "text/javascript"); });
-  server.on("/favicon.ico", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send(LittleFS, "/favicon.ico", "image/x-icon"); });
-  server.on("/ip", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send_P(200, "text/plain", myData.ip.c_str()); });
-  server.on("/ping", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send(200, "text/plain", "pong"); });
-  server.on("/json", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send(200, "application/json", wsSerializeJson()); });
-  server.on("/reboot", HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-          AsyncWebServerResponse *response;
-          if (myData.uptime > 2) {
-            response = request->beginResponse(200, "application/json", "{\"reboot\":true,\"message\":\"Rebooting...\"}");
-            response->addHeader("Connection", "close");
-            request->send(response);
-            Serial.println(F("> [HTTP] Rebooting..."));
-            reboot();
-          } else {
-            response = request->beginResponse(200, "application/json", "{\"reboot\":false,\"message\":\"Uptime less than or equal to 2, not rebooting.\"}");
-            response->addHeader("Connection", "close");
-            request->send(response);
-          } });
-  server.on("/update.html", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send(LittleFS, "/update.html", "text/html"); });
-  server.on(
-      "/update", HTTP_POST, [](AsyncWebServerRequest *request)
-      {
-    AsyncWebServerResponse *response;
-
-    if (!Update.hasError())
-    {
-        response = request->beginResponse(200, "application/json", "{\"success\":true,\"message\":\"Updated successfully!\",\"version\":\"v1.0\"}");
-        Serial.println(F("> [OTA] Successful"));
-    }
-    else
-    {
-        response = request->beginResponse(500, "application/json", "{\"success\":false,\"message\":\"Update failed\",\"version\":\"v1.0\"}");
-        Serial.println(F("> [OTA] Update failed"));
-    }
-
-    response->addHeader("Connection", "close");
-    request->send(response); },
-      [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final)
-      {
-        if (!index)
-        {
-          Serial.print(F("> [OTA] Updating... "));
-          Serial.println(filename);
-          Update.runAsync(true);
-          uint32_t free_space;
-          int cmd;
-
-          if (filename.indexOf("littlefs") > -1)
-          {
-            FSInfo fs_info;
-            LittleFS.info(fs_info);
-            free_space = fs_info.totalBytes;
-            cmd = U_FS;
-          }
-          else
-          {
-            free_space = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
-            cmd = U_FLASH;
-          }
-
-          if (!Update.begin(free_space, cmd))
-          {
-            Update.printError(Serial);
-          }
-        }
-
-        if (Update.write(data, len) != len)
-        {
-          Update.printError(Serial);
-        }
-
-        if (final)
-        {
-          if (!Update.end(true))
-          {
-            Update.printError(Serial);
-          }
-          else
-          {
-            Serial.println(F("> [OTA] Successful"));
-          }
-        }
-      });
-
-  // Start server
-  server.begin();
-}
+uint8_t connectedClients = 0;
 
 // cc1101
 const uint8_t byteArrSize = 61;
@@ -334,28 +176,8 @@ void loop()
 {
   MDNS.update();
   ws.cleanupClients();
-  if (WiFi.status() != WL_CONNECTED)
-  {
-    connectToWiFi();
-  }
-  if (!mqttClient.connected())
-  {
-    Serial.println("> [MQTT] Not connected loop");
-    long mqttNow = millis();
-    if (mqttNow - mqttLastReconnectAttempt > 5000)
-    {
-      mqttLastReconnectAttempt = mqttNow;
-      // Attempt to reconnect
-      if (connectToMqtt())
-      {
-        mqttLastReconnectAttempt = 0;
-      }
-    }
-  }
-  else
-  {
-    mqttClient.loop();
-  }
+  checkWiFi();
+  checkMqtt();
 #ifdef MARK
   printMARK();
 #endif
