@@ -1,5 +1,14 @@
 #include "helpers.h"
 
+// Last 4 digits of ChipID
+String getUniqueID()
+{
+  String uid = "0";
+  uid = WiFi.macAddress().substring(12);
+  uid.replace(":", "");
+  return uid;
+}
+
 // Reboot
 void reboot()
 {

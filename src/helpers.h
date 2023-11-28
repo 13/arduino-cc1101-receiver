@@ -22,8 +22,10 @@ extern wsData myData;
 extern const char* wifi_ssid;
 extern const char* wifi_pass;
 
-void reboot();
+// core
+String getUniqueID();
 void getState();
+void reboot();
 void connectToWiFi();
 boolean connectToMqtt();
 

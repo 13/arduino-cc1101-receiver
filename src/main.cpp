@@ -108,19 +108,109 @@ void initWebSocket()
 {
   ws.onEvent(onEvent);
   server.addHandler(&ws);
+
+  // Route web page
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
+            { request->send(LittleFS, "/index.html", "text/html"); });
+  server.on("/css/bootstrap.min.css", HTTP_GET, [](AsyncWebServerRequest *request)
+            { request->send(LittleFS, "/css/bootstrap.min.css", "text/css"); });
+  server.on("/js/bootstrap.bundle.min.js", HTTP_GET, [](AsyncWebServerRequest *request)
+            { request->send(LittleFS, "/js/bootstrap.bundle.min.js", "text/javascript"); });
+  server.on("/favicon.ico", HTTP_GET, [](AsyncWebServerRequest *request)
+            { request->send(LittleFS, "/favicon.ico", "image/x-icon"); });
+  server.on("/ip", HTTP_GET, [](AsyncWebServerRequest *request)
+            { request->send_P(200, "text/plain", myData.ip.c_str()); });
+  server.on("/ping", HTTP_GET, [](AsyncWebServerRequest *request)
+            { request->send(200, "text/plain", "pong"); });
+  server.on("/json", HTTP_GET, [](AsyncWebServerRequest *request)
+            { request->send(200, "application/json", wsSerializeJson()); });
+  server.on("/reboot", HTTP_GET, [](AsyncWebServerRequest *request)
+            {
+          AsyncWebServerResponse *response;
+          if (myData.uptime > 2) {
+            response = request->beginResponse(200, "application/json", "{\"reboot\":true,\"message\":\"Rebooting...\"}");
+            response->addHeader("Connection", "close");
+            request->send(response);
+            Serial.println(F("> [HTTP] Rebooting..."));
+            reboot();
+          } else {
+            response = request->beginResponse(200, "application/json", "{\"reboot\":false,\"message\":\"Uptime less than or equal to 2, not rebooting.\"}");
+            response->addHeader("Connection", "close");
+            request->send(response);
+          } });
+  server.on("/update.html", HTTP_GET, [](AsyncWebServerRequest *request)
+            { request->send(LittleFS, "/update.html", "text/html"); });
+  server.on(
+      "/update", HTTP_POST, [](AsyncWebServerRequest *request)
+      {
+    AsyncWebServerResponse *response;
+
+    if (!Update.hasError())
+    {
+        response = request->beginResponse(200, "application/json", "{\"success\":true,\"message\":\"Updated successfully!\",\"version\":\"v1.0\"}");
+        Serial.println(F("> [OTA] Successful"));
+    }
+    else
+    {
+        response = request->beginResponse(500, "application/json", "{\"success\":false,\"message\":\"Update failed\",\"version\":\"v1.0\"}");
+        Serial.println(F("> [OTA] Update failed"));
+    }
+
+    response->addHeader("Connection", "close");
+    request->send(response); },
+      [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final)
+      {
+        if (!index)
+        {
+          Serial.print(F("> [OTA] Updating... "));
+          Serial.println(filename);
+          Update.runAsync(true);
+          uint32_t free_space;
+          int cmd;
+
+          if (filename.indexOf("littlefs") > -1)
+          {
+            FSInfo fs_info;
+            LittleFS.info(fs_info);
+            free_space = fs_info.totalBytes;
+            cmd = U_FS;
+          }
+          else
+          {
+            free_space = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
+            cmd = U_FLASH;
+          }
+
+          if (!Update.begin(free_space, cmd))
+          {
+            Update.printError(Serial);
+          }
+        }
+
+        if (Update.write(data, len) != len)
+        {
+          Update.printError(Serial);
+        }
+
+        if (final)
+        {
+          if (!Update.end(true))
+          {
+            Update.printError(Serial);
+          }
+          else
+          {
+            Serial.println(F("> [OTA] Successful"));
+          }
+        }
+      });
+
+  // Start server
+  server.begin();
 }
 
 // cc1101
 const uint8_t byteArrSize = 61;
-
-// Last 4 digits of ChipID
-String getUniqueID()
-{
-  String uid = "0";
-  uid = WiFi.macAddress().substring(12);
-  uid.replace(":", "");
-  return uid;
-}
 
 // supplementary functions
 #ifdef MARK
@@ -236,106 +326,8 @@ void setup()
 
     reboot();
   }
-
+  // Initalize websocket
   initWebSocket();
-  // Route web page
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send(LittleFS, "/index.html", "text/html"); });
-  server.on("/css/bootstrap.min.css", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send(LittleFS, "/css/bootstrap.min.css", "text/css"); });
-  server.on("/js/bootstrap.bundle.min.js", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send(LittleFS, "/js/bootstrap.bundle.min.js", "text/javascript"); });
-  server.on("/favicon.ico", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send(LittleFS, "/favicon.ico", "image/x-icon"); });
-  server.on("/ip", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send_P(200, "text/plain", myData.ip.c_str()); });
-  server.on("/ping", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send(200, "text/plain", "pong"); });
-  server.on("/json", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send(200, "application/json", wsSerializeJson()); });
-  server.on("/reboot", HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-          AsyncWebServerResponse *response;
-          if (myData.uptime > 2) {
-            response = request->beginResponse(200, "application/json", "{\"reboot\":true,\"message\":\"Rebooting...\"}");
-            response->addHeader("Connection", "close");
-            request->send(response);
-            Serial.println(F("> [HTTP] Rebooting..."));
-            reboot();
-          } else {
-            response = request->beginResponse(200, "application/json", "{\"reboot\":false,\"message\":\"Uptime less than or equal to 2, not rebooting.\"}");
-            response->addHeader("Connection", "close");
-            request->send(response);
-          }});
-  server.on("/update.html", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send(LittleFS, "/update.html", "text/html"); });
-  server.on(
-      "/update", HTTP_POST, [](AsyncWebServerRequest *request)
-      {
-    AsyncWebServerResponse *response;
-
-    if (!Update.hasError())
-    {
-        response = request->beginResponse(200, "application/json", "{\"success\":true,\"message\":\"Updated successfully!\",\"version\":\"v1.0\"}");
-        Serial.println(F("> [OTA] Successful"));
-    }
-    else
-    {
-        response = request->beginResponse(500, "application/json", "{\"success\":false,\"message\":\"Update failed\",\"version\":\"v1.0\"}");
-        Serial.println(F("> [OTA] Update failed"));
-    }
-
-    response->addHeader("Connection", "close");
-    request->send(response); },
-      [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final)
-      {
-        if (!index)
-        {
-          Serial.print(F("> [OTA] Updating... "));
-          Serial.println(filename);
-          Update.runAsync(true);
-          uint32_t free_space;
-          int cmd;
-
-          if (filename.indexOf("littlefs") > -1)
-          {
-            FSInfo fs_info;
-            LittleFS.info(fs_info);
-            free_space = fs_info.totalBytes;
-            cmd = U_FS;
-          }
-          else
-          {
-            free_space = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
-            cmd = U_FLASH;
-          }
-
-          if (!Update.begin(free_space, cmd))
-          {
-            Update.printError(Serial);
-          }
-        }
-
-        if (Update.write(data, len) != len)
-        {
-          Update.printError(Serial);
-        }
-
-        if (final)
-        {
-          if (!Update.end(true))
-          {
-            Update.printError(Serial);
-          }
-          else
-          {
-            Serial.println(F("> [OTA] Successful"));
-          }
-        }
-      });
-
-  // Start server
-  server.begin();
 }
 
 void loop()
@@ -421,7 +413,6 @@ void loop()
           {
             Serial.print((char)byteArr[i]);
             input_str += (char)byteArr[i];
-
           }
         }
         Serial.print(F(",RSSI:"));
@@ -517,7 +508,7 @@ void loop()
 #endif
         // ccJsonStr = "";
         notifyClients();
-        
+
       } // length 0
 #ifdef DEBUG_CRC
       else
