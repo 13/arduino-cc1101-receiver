@@ -134,7 +134,7 @@
         }
         if (parsedData.version) {
           versionElement.innerHTML =
-            '<a href="/update.html" class="">' + parsedData.version + "</a>";
+          '<a href="/update.html" class="link-light link-offset-2 link-underline link-underline-opacity-0">' + parsedData.version + "</a>";
         }
         if (parsedData.memfree) {
           memFreeElement.innerHTML =
@@ -164,7 +164,7 @@
         ) {
           const packetsElement = document.getElementById("packets");
           packetsElement.innerHTML =
-            '<a href="#" class="list-group-item list-group-item-action fw-bold">Last 5 packets:</a>';
+            '<a href="#" class="list-group-item list-group-item-action fw-bold">Last packets:</a>';
 
           const listContent = parsedData.packets
             .filter((element) => element !== null && element !== "")
