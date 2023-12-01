@@ -7,7 +7,7 @@ import datetime
 git_version = subprocess.check_output(['git', 'describe', '--abbrev=7', '--always', '--tags']).decode('utf-8').strip()
 
 # Get current date and time
-build_time = datetime.datetime.now().strftime("%y-%m-%dT%H:%M:%S")
+build_time = datetime.datetime.now().strftime("%y.%m.%dT%H:%M:%S")
 
 # Print the results
 version = git_version + ' (' + build_time + ')'
