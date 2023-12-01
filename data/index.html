@@ -43,7 +43,7 @@
                   </tr>
                   <tr>
                     <th class="ps-3">
-                      <span class="labelRam">RAM: </span>
+                      <span class="labelRam">Free Memory: </span>
                     </th>
                     <td class="text-end">
                       <span id="memfree"></span><span id="memfrag"></span>
@@ -134,14 +134,16 @@
         }
         if (parsedData.version) {
           versionElement.innerHTML =
-          '<a href="/update.html" class="link-light link-offset-2 link-underline link-underline-opacity-0 text-muted small">' + parsedData.version + "</a>";
+            '<a href="/update.html" class="link-light link-offset-2 link-underline link-underline-opacity-0 text-muted small">' +
+            parsedData.version +
+            "</a>";
         }
         if (parsedData.memfree) {
           memFreeElement.innerHTML =
-            (parsedData.memfree / 1024).toFixed(2) + "KB";
+            (parsedData.memfree / 1024).toFixed(1) + "KB";
         }
         if (parsedData.memfrag) {
-          memFragElement.innerHTML = " (" + parsedData.memfrag + "%)";
+          memFragElement.innerHTML = " (frag. " + parsedData.memfrag + "%)";
         }
         if (parsedData.uptime) {
           const totalMinutes = parsedData.uptime;
@@ -149,13 +151,28 @@
           const days = Math.floor(totalMinutes / totalMinutesPerDay);
           const hours = Math.floor((totalMinutes % totalMinutesPerDay) / 60);
           const minutes = totalMinutes % 60;
-          const formattedUptime = `${days ? days + "d " : ""}${
-            hours ? hours + "h " : ""
-          }${minutes}m`;
+
+          // Function to pad single-digit values with leading zeros
+          const padWithZero = (value) =>
+            value < 10 ? `0${value}` : `${value}`;
+
+          const formattedUptime = `${days ? days + "T:" : ""}${padWithZero(
+            hours
+          )}:${padWithZero(minutes)}`;
           uptimeElement.innerHTML = formattedUptime;
         }
         if (parsedData.rssi) {
-          rssiElement.innerHTML = parsedData.rssi;
+          const rssi = parsedData.rssi;
+          const maxRSSI = 0;
+          const minRSSI = -100;
+          const signalStrengthPercentage = Math.max(
+            0,
+            Math.min(100, ((rssi - minRSSI) / (maxRSSI - minRSSI)) * 100)
+          );
+
+          rssiElement.innerHTML = `${signalStrengthPercentage.toFixed(
+            0
+          )}%, ${rssi} dBm`;
         }
         if (
           parsedData.packets &&
