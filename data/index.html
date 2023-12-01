@@ -20,44 +20,44 @@
           <div class="col">
             <div id="hostname" class="display-6 text-center"></div>
             <p id="desc" class="lead text-center">arduino cc1101 receiver</p>
-              <div>
-                <table class="table table-hover mb-0">
-                  <tbody>
-                    <tr>
-                      <th class="ps-3">
-                        <span class="labelMqtt">SSID: </span>
-                      </th>
-                      <td class="text-end">
-                        <span id="ssid"></span> (<span id="rssi"></span>)
-                      </td>
-                    </tr>
-                    <tr>
-                      <th class="ps-3"><span class="labelIp">IP: </span></th>
-                      <td class="text-end"><span id="ip"></span></td>
-                    </tr>
-                    <tr>
-                      <th class="ps-3">
-                        <span class="labelUptime">Uptime: </span>
-                      </th>
-                      <td class="text-end"><span id="uptime"></span></td>
-                    </tr>
-                    <tr>
-                      <th class="ps-3">
-                        <span class="labelRam">RAM: </span>
-                      </th>
-                      <td class="text-end">
-                        <span id="memfree"></span><span id="memfrag"></span>
-                      </td>
-                    </tr>
-                    <tr>
-                      <th class="ps-3">
-                        <span class="labelReset">Reset: </span>
-                      </th>
-                      <td class="text-end"><span id="reset"></span></td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+            <div>
+              <table class="table table-hover mb-0">
+                <tbody>
+                  <tr>
+                    <th class="ps-3">
+                      <span class="labelMqtt">SSID: </span>
+                    </th>
+                    <td class="text-end">
+                      <span id="ssid"></span> (<span id="rssi"></span>)
+                    </td>
+                  </tr>
+                  <tr>
+                    <th class="ps-3"><span class="labelIp">IP: </span></th>
+                    <td class="text-end"><span id="ip"></span></td>
+                  </tr>
+                  <tr>
+                    <th class="ps-3">
+                      <span class="labelUptime">Uptime: </span>
+                    </th>
+                    <td class="text-end"><span id="uptime"></span></td>
+                  </tr>
+                  <tr>
+                    <th class="ps-3">
+                      <span class="labelRam">RAM: </span>
+                    </th>
+                    <td class="text-end">
+                      <span id="memfree"></span><span id="memfrag"></span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <th class="ps-3">
+                      <span class="labelReset">Reset: </span>
+                    </th>
+                    <td class="text-end"><span id="reset"></span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
             <div class="list-group list-group-flush" id="packets"></div>
           </div>
         </div>
@@ -133,7 +133,8 @@
           resetElement.innerHTML = parsedData.reset;
         }
         if (parsedData.version) {
-          versionElement.innerHTML = '<a href="/update.html" class="">' + parsedData.version + '</a>';
+          versionElement.innerHTML =
+            '<a href="/update.html" class="">' + parsedData.version + "</a>";
         }
         if (parsedData.memfree) {
           memFreeElement.innerHTML =
@@ -146,10 +147,8 @@
           const totalMinutes = parsedData.uptime;
           const totalMinutesPerDay = 24 * 60;
           const days = Math.floor(totalMinutes / totalMinutesPerDay);
-          const hours = Math.floor(
-            totalMinutes / 60 - Math.floor(totalMinutes / totalMinutesPerDay) * 24
-          );
-          const minutes = totalMinutes - (hours * 60);
+          const hours = Math.floor((totalMinutes % totalMinutesPerDay) / 60);
+          const minutes = totalMinutes % 60;
           const formattedUptime = `${days ? days + "d " : ""}${
             hours ? hours + "h " : ""
           }${minutes}m`;
@@ -158,8 +157,11 @@
         if (parsedData.rssi) {
           rssiElement.innerHTML = parsedData.rssi;
         }
-
-        if (parsedData.packets && parsedData.packets !== null && parsedData.packets[0] !== "") {
+        if (
+          parsedData.packets &&
+          parsedData.packets !== null &&
+          parsedData.packets[0] !== ""
+        ) {
           const packetsElement = document.getElementById("packets");
           packetsElement.innerHTML =
             '<a href="#" class="list-group-item list-group-item-action fw-bold">Last 5 packets:</a>';
@@ -170,7 +172,7 @@
               (element) =>
                 '<a href="#" class="list-group-item list-group-item-action text-break">' +
                 element +
-                '</a>'
+                "</a>"
             )
             .join("");
 
