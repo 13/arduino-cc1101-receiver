@@ -13,6 +13,7 @@
 #include <LittleFS.h>
 #include <ESPAsyncWebServer.h>
 #include <PubSubClient.h>
+#include "version.h"
 #include "OTAUpdate.h"
 #include "wsData.h"
 

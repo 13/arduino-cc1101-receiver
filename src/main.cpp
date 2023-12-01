@@ -113,7 +113,7 @@ void setup()
   Serial.println(F("> "));
   Serial.println(F("> "));
   Serial.print(F("> Booting... Compiled: "));
-  Serial.println(GIT_VERSION);
+  Serial.println(VERSION);
   Serial.print(F("> Node ID: "));
   Serial.println(getUniqueID());
   hostname += getUniqueID();

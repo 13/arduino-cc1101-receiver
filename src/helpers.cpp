@@ -31,7 +31,7 @@ void getState()
     myData.uptime = countMsg;
     myData.memfree = ESP.getFreeHeap();
     myData.memfrag = ESP.getHeapFragmentation();
-    myData.version = GIT_VERSION;
+    myData.version = VERSION;
   }
 }
 
@@ -125,7 +125,7 @@ boolean connectToMqtt()
       Serial.println(" OK");
       mqttClient.publish(lastWillTopic.c_str(), "online", true);
       mqttClient.publish(ipTopic.c_str(), WiFi.localIP().toString().c_str(), true);
-      mqttClient.publish(versionTopic.c_str(), GIT_VERSION, true);
+      mqttClient.publish(versionTopic.c_str(), VERSION, true);
     }
     else
     {
@@ -138,7 +138,7 @@ boolean connectToMqtt()
     // Serial.println("> [MQTT] Connected");
     mqttClient.publish(lastWillTopic.c_str(), "online", true);
     mqttClient.publish(ipTopic.c_str(), WiFi.localIP().toString().c_str(), true);
-    mqttClient.publish(versionTopic.c_str(), GIT_VERSION, true);
+    mqttClient.publish(versionTopic.c_str(), VERSION, true);
   }
   return mqttClient.connected();
 }
