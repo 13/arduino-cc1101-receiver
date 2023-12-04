@@ -32,6 +32,7 @@ void getState()
     myData.memfree = ESP.getFreeHeap();
     myData.memfrag = ESP.getHeapFragmentation();
     myData.version = VERSION;
+    myData.timestamp = timeClient.getEpochTime();
   }
 }
 
@@ -150,6 +151,7 @@ String wsSerializeJson()
   myData.rssi = WiFi.RSSI();
   myData.memfree = ESP.getFreeHeap();
   myData.memfrag = ESP.getHeapFragmentation();
+  myData.timestamp = timeClient.getEpochTime();
   String jsonStr = myData.toJson();
   Serial.print("> [WS] ");
   Serial.println(jsonStr);

@@ -8,6 +8,8 @@
 #include <WiFi.h>
 #include <ESPmDNS.h>
 #endif
+#include <NTPClient.h>
+#include <WiFiUdp.h>
 #include <Updater.h>
 #include "OTAUpdate.h"
 #include <ArduinoJson.h>
@@ -45,6 +47,8 @@ wsData myData;
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 OTAUpdater otaUpdater;
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP, "pool.ntp.org", 3600);
 
 long mqttLastReconnectAttempt = 0;
 
@@ -97,6 +101,7 @@ void printMARK()
 
     // 1 minute status update
     connectToMqtt();
+    timeClient.update();
     notifyClients();
   }
 }
@@ -140,6 +145,8 @@ void setup()
   if (WiFi.status() == WL_CONNECTED)
   {
     connectToMqtt();
+    timeClient.begin();
+    timeClient.update();
   }
   // Initialize mDNS & OTA
   if (!MDNS.begin(hostname))
@@ -286,6 +293,7 @@ void loop()
           pos = sep_pos + 1;
         }
         ccJson.remove("Z");
+        ccJson["timestamp"] = timeClient.getEpochTime();
 
         String ccJsonStr;
         serializeJson(ccJson, ccJsonStr);

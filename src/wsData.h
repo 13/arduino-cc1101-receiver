@@ -19,6 +19,7 @@ struct wsData {
     String hostname; 
     String reset;
     String version;
+    time_t timestamp;
     String packets[MAX_PACKETS];
 
     // Function to add packets at the first position and shift the rest to the right

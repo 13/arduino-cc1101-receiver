@@ -13,12 +13,16 @@
 #include <LittleFS.h>
 #include <ESPAsyncWebServer.h>
 #include <PubSubClient.h>
+#include <NTPClient.h>
+#include <WiFiUdp.h>
 #include "version.h"
 #include "OTAUpdate.h"
 #include "wsData.h"
 
 extern WiFiClient wifiClient;
 extern PubSubClient mqttClient;
+extern WiFiUDP ntpUDP;
+extern NTPClient timeClient;
 
 extern String hostname;
 extern const char* mqtt_topic_lwt;
