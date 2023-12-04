@@ -156,9 +156,9 @@
           const padWithZero = (value) =>
             value < 10 ? `0${value}` : `${value}`;
 
-          const formattedUptime = `${days ? days + "T:" : ""}${padWithZero(
+          const formattedUptime = `${days ? days + "T" : ""}${padWithZero(
             hours
-          )}:${padWithZero(minutes)}`;
+          )}:${padWithZero(minutes)}:01`;
           uptimeElement.innerHTML = formattedUptime;
         }
         if (parsedData.rssi) {
