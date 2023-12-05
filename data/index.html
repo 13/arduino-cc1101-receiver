@@ -4,11 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title></title>
-    <link
-      href="css/bootstrap.min.css"
-      rel="stylesheet"
-      crossorigin="anonymous"
-    />
+    <link href="css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous" />
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
   </head>
 
@@ -27,9 +23,7 @@
                     <th class="ps-3">
                       <span class="labelMqtt">SSID: </span>
                     </th>
-                    <td class="text-end">
-                      <span id="ssid"></span> (<span id="rssi"></span>)
-                    </td>
+                    <td class="text-end"><span id="ssid"></span> (<span id="rssi"></span>)</td>
                   </tr>
                   <tr>
                     <th class="ps-3"><span class="labelIp">IP: </span></th>
@@ -45,15 +39,19 @@
                     <th class="ps-3">
                       <span class="labelRam">Free Memory: </span>
                     </th>
-                    <td class="text-end">
-                      <span id="memfree"></span><span id="memfrag"></span>
-                    </td>
+                    <td class="text-end"><span id="memfree"></span><span id="memfrag"></span></td>
                   </tr>
                   <tr>
                     <th class="ps-3">
                       <span class="labelReset">Reset: </span>
                     </th>
                     <td class="text-end"><span id="reset"></span></td>
+                  </tr>
+                  <tr>
+                    <th class="ps-3">
+                      <span class="labelTimestamp">Last Update: </span>
+                    </th>
+                    <td class="text-end"><span id="timestamp"></span></td>
                   </tr>
                 </tbody>
               </table>
@@ -113,6 +111,7 @@
         const ipElement = document.getElementById("ip");
         const ssidElement = document.getElementById("ssid");
         const resetElement = document.getElementById("reset");
+        const timestampElement = document.getElementById("timestamp");
         const versionElement = document.getElementById("version");
         const uptimeElement = document.getElementById("uptime");
         const rssiElement = document.getElementById("rssi");
@@ -132,15 +131,16 @@
         if (parsedData.reset) {
           resetElement.innerHTML = parsedData.reset;
         }
+        if (parsedData.timestamp && parsedData.packets !== null && parsedData.timestamp !== "") {
+          var date = new Date(parsedData.timestamp * 1000);
+          var timestamp = date.toLocaleString();
+          timestampElement.innerHTML = timestamp;
+        }
         if (parsedData.version) {
-          versionElement.innerHTML =
-            '<a href="/update.html" class="link-light link-offset-2 link-underline link-underline-opacity-0 text-muted small">' +
-            parsedData.version +
-            "</a>";
+          versionElement.innerHTML = '<a href="/update.html" class="link-light link-offset-2 link-underline link-underline-opacity-0 text-muted small">' + parsedData.version + "</a>";
         }
         if (parsedData.memfree) {
-          memFreeElement.innerHTML =
-            (parsedData.memfree / 1024).toFixed(1) + "KB";
+          memFreeElement.innerHTML = (parsedData.memfree / 1024).toFixed(1) + "KB";
         }
         if (parsedData.memfrag) {
           memFragElement.innerHTML = " (frag. " + parsedData.memfrag + "%)";
@@ -153,44 +153,26 @@
           const minutes = totalMinutes % 60;
 
           // Function to pad single-digit values with leading zeros
-          const padWithZero = (value) =>
-            value < 10 ? `0${value}` : `${value}`;
+          const padWithZero = (value) => (value < 10 ? `0${value}` : `${value}`);
 
-          const formattedUptime = `${days ? days + "T" : ""}${padWithZero(
-            hours
-          )}:${padWithZero(minutes)}:01`;
+          const formattedUptime = `${days ? days + "T" : ""}${padWithZero(hours)}:${padWithZero(minutes)}:01`;
           uptimeElement.innerHTML = formattedUptime;
         }
         if (parsedData.rssi) {
           const rssi = parsedData.rssi;
           const maxRSSI = 0;
           const minRSSI = -100;
-          const signalStrengthPercentage = Math.max(
-            0,
-            Math.min(100, ((rssi - minRSSI) / (maxRSSI - minRSSI)) * 100)
-          );
+          const signalStrengthPercentage = Math.max(0, Math.min(100, ((rssi - minRSSI) / (maxRSSI - minRSSI)) * 100));
 
-          rssiElement.innerHTML = `${signalStrengthPercentage.toFixed(
-            0
-          )}%, ${rssi} dBm`;
+          rssiElement.innerHTML = `${signalStrengthPercentage.toFixed(0)}%, ${rssi} dBm`;
         }
-        if (
-          parsedData.packets &&
-          parsedData.packets !== null &&
-          parsedData.packets[0] !== ""
-        ) {
+        if (parsedData.packets && parsedData.packets !== null && parsedData.packets[0] !== "") {
           const packetsElement = document.getElementById("packets");
-          packetsElement.innerHTML =
-            '<a href="#" class="list-group-item list-group-item-action fw-bold">Last packets:</a>';
+          packetsElement.innerHTML = '<a href="#" class="list-group-item list-group-item-action fw-bold">Last packets:</a>';
 
           const listContent = parsedData.packets
             .filter((element) => element !== null && element !== "")
-            .map(
-              (element) =>
-                '<a href="#" class="list-group-item list-group-item-action text-break">' +
-                element +
-                "</a>"
-            )
+            .map((element) => '<a href="#" class="list-group-item list-group-item-action text-break">' + element + "</a>")
             .join("");
 
           packetsElement.innerHTML += listContent;

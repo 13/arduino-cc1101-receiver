@@ -19,6 +19,7 @@ struct wsData {
     String hostname; 
     String reset;
     String version;
+    time_t boottime;
     time_t timestamp;
     String packets[MAX_PACKETS];
 
@@ -45,6 +46,8 @@ struct wsData {
         doc["hostname"] = hostname;
         doc["reset"] = reset;
         doc["version"] = version;
+        doc["boottime"] = boottime;
+        doc["timestamp"] = timestamp;
 
         // Add the packets array to the document
         JsonArray packetsArray = doc.createNestedArray("packets");

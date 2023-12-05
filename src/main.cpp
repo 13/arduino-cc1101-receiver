@@ -147,6 +147,7 @@ void setup()
     connectToMqtt();
     timeClient.begin();
     timeClient.update();
+    myData.boottime = timeClient.getEpochTime();
   }
   // Initialize mDNS & OTA
   if (!MDNS.begin(hostname))
