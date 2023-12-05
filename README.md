@@ -3,7 +3,8 @@
 An Arduino CC1101 receiver for ESP8266/ESP32
 
 <p align="center">
-<img src="assets/screenshot.png" width="300">
+<img src="assets/screenshot1.png" width="300">
+<img src="assets/screenshot2.png" width="300">
 </p>
 
 ## Contents
@@ -91,7 +92,8 @@ git clone https://github.com/13/arduino-cc1101-receiver.git
 - [ ] ...
 
 ## Release History
-
+* v13
+    * Stable release
 * v10
     * Initial release
 
