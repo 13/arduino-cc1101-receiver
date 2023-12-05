@@ -54,6 +54,7 @@ RN = receiver node id
 #### Features
 - Websocket
 - mDNS
+- NTP
 - OTA Update
 
 ### Built With
