@@ -4,7 +4,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title></title>
-    <link href="css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous" />
+    <link
+      href="css/bootstrap.min.css"
+      rel="stylesheet"
+      crossorigin="anonymous"
+    />
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
   </head>
 
@@ -23,7 +27,9 @@
                     <th class="ps-3">
                       <span class="labelMqtt">SSID: </span>
                     </th>
-                    <td class="text-end"><span id="ssid"></span> (<span id="rssi"></span>)</td>
+                    <td class="text-end">
+                      <span id="ssid"></span> (<span id="rssi"></span>)
+                    </td>
                   </tr>
                   <tr>
                     <th class="ps-3"><span class="labelIp">IP: </span></th>
@@ -39,7 +45,9 @@
                     <th class="ps-3">
                       <span class="labelRam">Free Memory: </span>
                     </th>
-                    <td class="text-end"><span id="memfree"></span><span id="memfrag"></span></td>
+                    <td class="text-end">
+                      <span id="memfree"></span><span id="memfrag"></span>
+                    </td>
                   </tr>
                   <tr>
                     <th class="ps-3">
@@ -131,48 +139,126 @@
         if (parsedData.reset) {
           resetElement.innerHTML = parsedData.reset;
         }
-        if (parsedData.timestamp && parsedData.packets !== null && parsedData.timestamp !== "") {
-          var date = new Date(parsedData.timestamp * 1000);
-          var timestamp = date.toLocaleString();
-          timestampElement.innerHTML = timestamp;
+
+        // Last update timestamp
+        if (
+          parsedData.timestamp &&
+          parsedData.timestamp !== null &&
+          parsedData.timestamp !== ""
+        ) {
+          const timestamp = new Date((parsedData.timestamp - 3600) * 1000);
+          timestampElement.innerHTML =
+            timestamp.getHours().toString().padStart(2, "0") +
+            ":" +
+            timestamp.getMinutes().toString().padStart(2, "0") +
+            ":" +
+            timestamp.getSeconds().toString().padStart(2, "0");
         }
+
         if (parsedData.version) {
-          versionElement.innerHTML = '<a href="/update.html" class="link-light link-offset-2 link-underline link-underline-opacity-0 text-muted small">' + parsedData.version + "</a>";
+          versionElement.innerHTML =
+            '<a href="/update.html" class="link-light link-offset-2 link-underline link-underline-opacity-0 text-muted small">' +
+            parsedData.version +
+            "</a>";
         }
         if (parsedData.memfree) {
-          memFreeElement.innerHTML = (parsedData.memfree / 1024).toFixed(1) + "KB";
+          memFreeElement.innerHTML =
+            (parsedData.memfree / 1024).toFixed(1) + "KB";
         }
         if (parsedData.memfrag) {
           memFragElement.innerHTML = " (frag. " + parsedData.memfrag + "%)";
         }
-        if (parsedData.uptime) {
-          const totalMinutes = parsedData.uptime;
-          const totalMinutesPerDay = 24 * 60;
-          const days = Math.floor(totalMinutes / totalMinutesPerDay);
-          const hours = Math.floor((totalMinutes % totalMinutesPerDay) / 60);
-          const minutes = totalMinutes % 60;
 
-          // Function to pad single-digit values with leading zeros
-          const padWithZero = (value) => (value < 10 ? `0${value}` : `${value}`);
+        // Uptime old
+        /*if (parsedData.uptime &&
+            parsedData.boottime !== null &&
+            parsedData.boottime !== "") {
+            const totalMinutes = parsedData.uptime;
+            const totalMinutesPerDay = 24 * 60;
+            const days = Math.floor(totalMinutes / totalMinutesPerDay);
+            const hours = Math.floor((totalMinutes % totalMinutesPerDay) / 60);
+            const minutes = totalMinutes % 60;
 
-          const formattedUptime = `${days ? days + "T" : ""}${padWithZero(hours)}:${padWithZero(minutes)}:01`;
+            // Function to pad single-digit values with leading zeros
+            const padWithZero = (value) =>
+              value < 10 ? `0${value}` : `${value}`;
+
+            const formattedUptime = `${days ? days + "T" : ""}${padWithZero(
+              hours
+            )}:${padWithZero(minutes)}:01`;
+          uptimeElement.innerHTML = formattedUptime;
+        }*/
+        // Uptime
+        if (
+          parsedData.boottime &&
+          parsedData.boottime !== null &&
+          parsedData.boottime !== ""
+        ) {
+          var currentUnixTime = Math.floor(Date.now() / 1000 + 3600);
+          var uptimeInSeconds = currentUnixTime - parsedData.boottime;
+          var days = Math.floor(uptimeInSeconds / (24 * 60 * 60));
+          var hours = Math.floor(
+            (uptimeInSeconds % (24 * 60 * 60)) / (60 * 60)
+          );
+          var minutes = Math.floor((uptimeInSeconds % (60 * 60)) / 60);
+          var seconds = uptimeInSeconds % 60;
+          var formattedUptime =
+            days +
+            "T" +
+            hours.toString().padStart(2, "0") +
+            ":" +
+            minutes.toString().padStart(2, "0") +
+            ":" +
+            seconds.toString().padStart(2, "0");
+
           uptimeElement.innerHTML = formattedUptime;
         }
+
         if (parsedData.rssi) {
           const rssi = parsedData.rssi;
           const maxRSSI = 0;
           const minRSSI = -100;
-          const signalStrengthPercentage = Math.max(0, Math.min(100, ((rssi - minRSSI) / (maxRSSI - minRSSI)) * 100));
+          const signalStrengthPercentage = Math.max(
+            0,
+            Math.min(100, ((rssi - minRSSI) / (maxRSSI - minRSSI)) * 100)
+          );
 
-          rssiElement.innerHTML = `${signalStrengthPercentage.toFixed(0)}%, ${rssi} dBm`;
+          rssiElement.innerHTML = `${signalStrengthPercentage.toFixed(
+            0
+          )}%, ${rssi} dBm`;
         }
-        if (parsedData.packets && parsedData.packets !== null && parsedData.packets[0] !== "") {
+
+        if (
+          parsedData.packets &&
+          parsedData.packets !== null &&
+          parsedData.packets[0] !== ""
+        ) {
           const packetsElement = document.getElementById("packets");
-          packetsElement.innerHTML = '<a href="#" class="list-group-item list-group-item-action fw-bold">Last packets:</a>';
+          packetsElement.innerHTML =
+            '<a href="#" class="list-group-item list-group-item-action fw-bold">Last packets:</a>';
 
           const listContent = parsedData.packets
             .filter((element) => element !== null && element !== "")
-            .map((element) => '<a href="#" class="list-group-item list-group-item-action text-break">' + element + "</a>")
+            .map((element) => {
+              const packetData = JSON.parse(element);
+              delete packetData.RN;
+
+              const packetTs = new Date((packetData.timestamp - 3600) * 1000);
+              const formattedPacketTs =
+                packetTs.getHours().toString().padStart(2, "0") +
+                ":" +
+                packetTs.getMinutes().toString().padStart(2, "0") +
+                ":" +
+                packetTs.getSeconds().toString().padStart(2, "0");
+
+              delete packetData.timestamp;
+              const serializedData = JSON.stringify(packetData);
+              return (
+                '<a href="#" class="list-group-item list-group-item-action text-break">' +
+                `<span class="fw-bold">${formattedPacketTs}</span> ${serializedData}` +
+                "</a>"
+              );
+            })
             .join("");
 
           packetsElement.innerHTML += listContent;
