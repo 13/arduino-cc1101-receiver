@@ -20,7 +20,7 @@
           <div class="col">
             <div id="hostname" class="display-6 text-center"></div>
             <p id="desc" class="lead text-center">arduino cc1101 receiver</p>
-            <div class="d-grid gap-2 col-6 mx-auto">
+            <div class="d-grid gap-2 col-md-6 mx-auto">
               <form
                 id="updateForm"
                 action="/update"
@@ -131,7 +131,9 @@
         }
         if (parsedData.version) {
           versionElement.innerHTML =
-            '<a href="/update.html" class="link-light link-offset-2 link-underline link-underline-opacity-0 text-muted small">' + parsedData.version + "</a>";
+            '<a href="/update.html" class="link-light link-offset-2 link-underline link-underline-opacity-0 text-muted small">' +
+            parsedData.version +
+            "</a>";
         }
       }
 

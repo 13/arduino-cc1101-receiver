@@ -63,8 +63,10 @@
                   </tr>
                 </tbody>
               </table>
+              <table class="table table-hover mb-0">
+                <tbody id="packets"></tbody>
+              </table>
             </div>
-            <div class="list-group list-group-flush" id="packets"></div>
           </div>
         </div>
       </div>
@@ -235,7 +237,7 @@
         ) {
           const packetsElement = document.getElementById("packets");
           packetsElement.innerHTML =
-            '<a href="#" class="list-group-item list-group-item-action fw-bold">Last Packets:</a>';
+            '<tr><th class="ps-3">Last Packets:</th></tr>';
 
           const listContent = parsedData.packets
             .filter((element) => element !== null && element !== "")
@@ -256,9 +258,9 @@
               const newPacketData = { ...tsPair, ...packetData };
               const serializedData = JSON.stringify(newPacketData);
               return (
-                '<a href="#" class="list-group-item list-group-item-action text-break">' +
+                '<tr><td class="ps-3 text-break">' +
                 `${serializedData}` +
-                "</a>"
+                "</td></tr>"
               );
             })
             .join("");
