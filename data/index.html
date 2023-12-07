@@ -51,9 +51,9 @@
                   </tr>
                   <tr>
                     <th class="ps-3">
-                      <span class="labelReset">Reset: </span>
+                      <span class="labelResetreason">Reset: </span>
                     </th>
-                    <td class="text-end"><span id="reset"></span></td>
+                    <td class="text-end"><span id="resetreason"></span></td>
                   </tr>
                   <tr>
                     <th class="ps-3">
@@ -120,7 +120,7 @@
         const hostnameElement = document.getElementById("hostname");
         const ipElement = document.getElementById("ip");
         const ssidElement = document.getElementById("ssid");
-        const resetElement = document.getElementById("reset");
+        const resetreasonElement = document.getElementById("resetreason");
         const timestampElement = document.getElementById("timestamp");
         const versionElement = document.getElementById("version");
         const uptimeElement = document.getElementById("uptime");
@@ -138,8 +138,8 @@
         if (parsedData.ssid) {
           ssidElement.innerHTML = parsedData.ssid;
         }
-        if (parsedData.reset) {
-          resetElement.innerHTML = parsedData.reset;
+        if (parsedData.resetreason) {
+          resetreasonElement.innerHTML = parsedData.resetreason;
         }
 
         // Last update timestamp

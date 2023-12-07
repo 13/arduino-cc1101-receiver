@@ -17,6 +17,26 @@ void reboot()
   ESP.restart();
 }
 
+// Initialize LittleFS
+void initFS()
+{
+  if (!LittleFS.begin())
+  {
+    Serial.println(F("> [LittleFS] ERROR "));
+    reboot();
+  }
+}
+
+// Initialize mDNS
+void initMDNS()
+{
+  if (!MDNS.begin(hostname.c_str()))
+  {
+    Serial.println(F("> [mDNS] ERROR"));
+  }
+  MDNS.addService("http", "tcp", 80);
+}
+
 // Get state
 void getState()
 {
@@ -26,13 +46,67 @@ void getState()
     myData.mac = WiFi.macAddress();
     myData.ssid = WiFi.SSID();
     myData.rssi = WiFi.RSSI();
+#if defined(ESP8266)
     myData.hostname = WiFi.hostname();
-    myData.reset = ESP.getResetReason();
-    myData.uptime = countMsg;
-    myData.memfree = ESP.getFreeHeap();
+    myData.resetreason = ESP.getResetReason();
     myData.memfrag = ESP.getHeapFragmentation();
+#endif
+#if defined(ESP32)
+    myData.hostname = WiFi.getHostname();
+    myData.resetreason = esp_reset_reason();
+    myData.memfrag = ESP.getMaxAllocHeap();
+#endif
+    myData.memfree = ESP.getFreeHeap();
+    myData.uptime = countMsg;
     myData.version = VERSION;
     myData.timestamp = timeClient.getEpochTime();
+  }
+}
+
+// print mark
+void printMARK()
+{
+  if (countMsg == 0)
+  {
+    Serial.println(F("> [MARK] Starting... OK"));
+    countMsg++;
+  }
+  if (countMsg == UINT32_MAX)
+  {
+    countMsg = 1;
+  }
+  if (millis() - lastMillis >= INTERVAL_1MIN)
+  {
+    Serial.print(F("> [MARK] Uptime: "));
+
+    if (countMsg >= 60)
+    {
+      int hours = countMsg / 60;
+      int remMins = countMsg % 60;
+      if (hours >= 24)
+      {
+        int days = hours / 24;
+        hours = hours % 24;
+        Serial.print(days);
+        Serial.print(F("d "));
+      }
+      Serial.print(hours);
+      Serial.print(F("h "));
+      Serial.print(remMins);
+      Serial.println(F("m"));
+    }
+    else
+    {
+      Serial.print(countMsg);
+      Serial.println(F("m"));
+    }
+    countMsg++;
+    lastMillis += INTERVAL_1MIN;
+
+    // 1 minute status update
+    connectToMqtt();
+    timeClient.update();
+    notifyClients();
   }
 }
 
@@ -150,7 +224,12 @@ String wsSerializeJson()
   myData.uptime = countMsg;
   myData.rssi = WiFi.RSSI();
   myData.memfree = ESP.getFreeHeap();
+#if defined(ESP8266)
   myData.memfrag = ESP.getHeapFragmentation();
+#endif
+#if defined(ESP32)
+  myData.memfrag = ESP.getMaxAllocHeap();
+#endif
   myData.timestamp = timeClient.getEpochTime();
   String jsonStr = myData.toJson();
   Serial.print("> [WS] ");
@@ -261,16 +340,24 @@ void initWebSocket()
         {
           Serial.print(F("> [OTA] Updating... "));
           Serial.println(filename);
+#if defined(ESP8266)
           Update.runAsync(true);
+#endif
           uint32_t free_space;
           int cmd;
 
           if (filename.indexOf("littlefs") > -1)
           {
+#if defined(ESP8266)
             FSInfo fs_info;
             LittleFS.info(fs_info);
             free_space = fs_info.totalBytes;
             cmd = U_FS;
+#endif
+#if defined(ESP32)
+            free_space = LittleFS.totalBytes();
+            cmd = U_SPIFFS;
+#endif
           }
           else
           {

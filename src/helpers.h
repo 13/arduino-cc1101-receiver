@@ -5,19 +5,27 @@
 #if defined(ESP8266)
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
+#include <ESP8266mDNS.h>
+#include <Updater.h>
 #endif
 #if defined(ESP32)
 #include <WiFi.h>
+#include <ESPmDNS.h>
+#include "time.h" // Built-in
+#include "esp_system.h"
+#include <Update.h>
 #endif
 #include <FS.h>
+#define SPIFFS LittleFS
 #include <LittleFS.h>
 #include <ESPAsyncWebServer.h>
 #include <PubSubClient.h>
 #include <NTPClient.h>
 #include <WiFiUdp.h>
 #include "version.h"
-#include "OTAUpdate.h"
 #include "wsData.h"
+
+#define INTERVAL_1MIN (1 * 60 * 1000L)
 
 extern WiFiClient wifiClient;
 extern PubSubClient mqttClient;
@@ -27,10 +35,10 @@ extern NTPClient timeClient;
 extern String hostname;
 extern const char* mqtt_topic_lwt;
 extern uint32_t countMsg;
+extern unsigned long lastMillis;
 extern wsData myData;
 extern const char* wifi_ssid;
 extern const char* wifi_pass;
-extern OTAUpdater otaUpdater;
 extern long mqttLastReconnectAttempt;
 
 // http & websocket
@@ -44,6 +52,9 @@ void getState();
 void reboot();
 void checkWiFi();
 void connectToWiFi();
+void initFS();
+void initMDNS();
+void printMARK();
 // mqtt
 void checkMqtt();
 boolean connectToMqtt();

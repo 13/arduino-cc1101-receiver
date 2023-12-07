@@ -1,38 +1,8 @@
-#include <Arduino.h>
-#if defined(ESP8266)
-#include <ESP8266WiFi.h>
-#include <WiFiClient.h>
-#include <ESP8266mDNS.h>
-#endif
-#if defined(ESP32)
-#include <WiFi.h>
-#include <ESPmDNS.h>
-#endif
-#include <NTPClient.h>
-#include <WiFiUdp.h>
-#include <Updater.h>
-#include "OTAUpdate.h"
-#include <ArduinoJson.h>
-#include <PubSubClient.h>
-#include <ESPAsyncTCP.h>
-#include <ESPAsyncWebServer.h>
-#include <FS.h>
 #include <ELECHOUSE_CC1101_SRC_DRV.h>
+
 #include "wsData.h"
 #include "helpers.h"
-#define SPIFFS LittleFS
-#include <LittleFS.h>
-#include "credentials.h"
-
-// Edit credentials.h
-
-#ifdef VERBOSE
-// one minute mark
-#define MARK
-#define INTERVAL_1MIN (1 * 60 * 1000L)
-unsigned long lastMillis = 0L;
-uint32_t countMsg = 0;
-#endif
+#include "credentials.h" // Edit credentials.h
 
 #if defined(ESP8266)
 String hostname = "esp8266-";
@@ -46,12 +16,10 @@ PubSubClient mqttClient(wifiClient);
 wsData myData;
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
-OTAUpdater otaUpdater;
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org", 3600);
 
 long mqttLastReconnectAttempt = 0;
-
 int wsDataSize = 0;
 uint8_t connectedClients = 0;
 
@@ -59,52 +27,11 @@ uint8_t connectedClients = 0;
 const uint8_t byteArrSize = 61;
 
 // supplementary functions
-#ifdef MARK
-void printMARK()
-{
-  if (countMsg == 0)
-  {
-    Serial.println(F("> [MARK] Starting... OK"));
-    countMsg++;
-  }
-  if (countMsg == UINT32_MAX)
-  {
-    countMsg = 1;
-  }
-  if (millis() - lastMillis >= INTERVAL_1MIN)
-  {
-    Serial.print(F("> [MARK] Uptime: "));
-
-    if (countMsg >= 60)
-    {
-      int hours = countMsg / 60;
-      int remMins = countMsg % 60;
-      if (hours >= 24)
-      {
-        int days = hours / 24;
-        hours = hours % 24;
-        Serial.print(days);
-        Serial.print(F("d "));
-      }
-      Serial.print(hours);
-      Serial.print(F("h "));
-      Serial.print(remMins);
-      Serial.println(F("m"));
-    }
-    else
-    {
-      Serial.print(countMsg);
-      Serial.println(F("m"));
-    }
-    countMsg++;
-    lastMillis += INTERVAL_1MIN;
-
-    // 1 minute status update
-    connectToMqtt();
-    timeClient.update();
-    notifyClients();
-  }
-}
+#ifdef VERBOSE
+// one minute mark
+#define MARK
+unsigned long lastMillis = 0L;
+uint32_t countMsg = 0;
 #endif
 
 void setup()
@@ -134,12 +61,7 @@ void setup()
 #endif
   Serial.println();
 #endif
-  // Initialize LittleFS
-  if (!LittleFS.begin())
-  {
-    Serial.println(F("> [LittleFS] ERROR "));
-    reboot();
-  }
+  initFS();
   connectToWiFi();
   mqttClient.setServer(mqtt_server, mqtt_port);
   if (WiFi.status() == WL_CONNECTED)
@@ -149,12 +71,7 @@ void setup()
     timeClient.update();
     myData.boottime = timeClient.getEpochTime();
   }
-  // Initialize mDNS & OTA
-  if (!MDNS.begin(hostname))
-  {
-    Serial.println(F("> [mDNS] ERROR"));
-  }
-  MDNS.addService("http", "tcp", 80);
+  initMDNS();
   // Start CC1101
   Serial.print(F("> [CC1101] Initializing... "));
   int cc_state = ELECHOUSE_cc1101.getCC1101();
@@ -182,7 +99,9 @@ void setup()
 
 void loop()
 {
+#if defined(ESP8266)
   MDNS.update();
+#endif
   ws.cleanupClients();
   checkWiFi();
   checkMqtt();
