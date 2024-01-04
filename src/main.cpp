@@ -317,9 +317,6 @@ void setup()
 void loop()
 {
   ws.cleanupClients();
-#ifdef REQUIRES_INTERNET
-  checkWiFi();
-#endif
   checkMqtt();
 #ifdef MARK
   printMARK();

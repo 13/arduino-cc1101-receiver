@@ -61,19 +61,19 @@
                     </th>
                     <td class="text-end"><span id="timestamp"></span></td>
                   </tr>
-                  <tr id="carRow0">
+                  <tr id="carRow0" class="d-none">
                     <th class="ps-3">
                       <span class="labelgarageIsFull">Garage Full: </span>
                     </th>
                     <td class="text-end"><span id="garageisfull"></span></td>
                   </tr>
-                  <tr id="carRow1">
+                  <tr id="carRow1" class="d-none">
                     <th class="ps-3">
                       <span class="labelcarIsPresent0">Car1: </span>
                     </th>
                     <td class="text-end"><span id="carispresent0"></span></td>
                   </tr>
-                  <tr id="carRow2">
+                  <tr id="carRow2" class="d-none">
                     <th class="ps-3">
                       <span class="labelcarIsPresent1">Car2: </span>
                     </th>
@@ -82,7 +82,7 @@
                 </tbody>
               </table>
               <table class="table table-hover mb-0">
-                <tbody id="packets"></tbody>
+                <tbody id="packets" class="d-none"></tbody>
               </table>
             </div>
           </div>
@@ -154,6 +154,7 @@
           document.getElementById("carRow1"),
           document.getElementById("carRow2"),
         ];
+        const packetsElement = document.getElementById("packets");
 
         if (parsedData.hostname) {
           document.querySelector("title").textContent = parsedData.hostname;
@@ -252,6 +253,10 @@
           Array.isArray(parsedData.distances) &&
           parsedData.cars.length === parsedData.distances.length
         ) {
+          for (let i = 0; i < carRowElements.length; i++) {
+            //carRowElements[0].style.display = "";
+            carRowElements[i].classList.remove('d-none');
+          }
           for (let i = 0; i < parsedData.cars.length; i++) {
             const carIsPresentElement = document.getElementById(
               `carispresent${i}`
@@ -262,28 +267,25 @@
                 parsedData.cars[i] + " (" + parsedData.distances[i] + "cm)";
             }
           }
-        } else {
-          for (let i = 1; i < carRowElements.length; i++) {
-            carRowElements[i].style.display = "none";
-          }
         }
 
         if (
           parsedData.garageFull != null &&
           parsedData.garageFull !== undefined
         ) {
-          garageIsFullElement.innerHTML = parsedData.garageFull;
-        } else {
           for (let i = 0; i < carRowElements.length; i++) {
-            carRowElements[0].style.display = "none";
+            //carRowElements[0].style.display = "";
+            carRowElements[0].classList.remove('d-none');
           }
+          garageIsFullElement.innerHTML = parsedData.garageFull;
         }
+
         if (
           parsedData.packets &&
           parsedData.packets !== null &&
           parsedData.packets[0] !== ""
         ) {
-          const packetsElement = document.getElementById("packets");
+          packetsElement.classList.remove('d-none');
           packetsElement.innerHTML =
             '<tr><th class="ps-3">Last Packets:</th></tr>';
 
@@ -314,16 +316,6 @@
             .join("");
 
           packetsElement.innerHTML += listContent;
-        } else {
-          packetsElement.style.display = "none";
-        }
-      }
-
-      function checkAndToggleVisibility(rowElement, carData) {
-        // Check if carData exists
-        if (!carData) {
-          // If not, hide the <tr>
-          rowElement.style.display = "none";
         }
       }
 

@@ -128,7 +128,8 @@ void printMARK()
       notifyClients();
     }
 #ifndef REQUIRES_INTERNET
-    if (countMsg % 1440 == 0)
+    // Check every 5 minutes online status
+    if (countMsg % 5 == 0)
     {
       checkWiFi();
       if (WiFi.status() != WL_CONNECTED)
@@ -149,8 +150,9 @@ void checkWiFi()
   }
   else
   {
-    if (WiFi.status() == WL_CONNECTED)
+    if (WiFi.status() == WL_CONNECTED && countMsg < 1)
     {
+      Serial.println("> [WiFi] Connected ");
       Serial.print("> [WiFi] IP: ");
       Serial.println(WiFi.localIP().toString());
     }
