@@ -1,16 +1,21 @@
+#include <Arduino.h>
 #include <ELECHOUSE_CC1101_SRC_DRV.h>
+#include "../include/version.h"
+#include <wsData.h>
+#include <helpers.h>
+#include "credentials.h"
 
-#include "wsData.h"
-#include "helpers.h"
-#include "credentials.h" // Edit credentials.h
+// cc1101
+const uint8_t byteArrSize = 61;
 
+// ESP
 #if defined(ESP8266)
 String hostname = "esp8266-";
 #endif
 #if defined(ESP32)
 String hostname = "esp32-";
 #endif
-
+// WiFi & MQTT
 WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient);
 wsData myData;
@@ -23,37 +28,43 @@ long mqttLastReconnectAttempt = 0;
 int wsDataSize = 0;
 uint8_t connectedClients = 0;
 
-// cc1101
-const uint8_t byteArrSize = 61;
+unsigned long previousMinute = 0;
 
 // supplementary functions
 #ifdef VERBOSE
 // one minute mark
 #define MARK
-unsigned long lastMillis = 0L;
+unsigned long lastMillisMark = 0L;
 uint32_t countMsg = 0;
 #endif
 
-void setup()
+void initSerial()
 {
   Serial.begin(115200);
   delay(10);
-#ifdef VERBOSE
+}
+
+void printBootMsg()
+{
+#ifdef DEBUG
   delay(5000);
 #endif
   // Start Boot
+  delay(1000);
   Serial.println(F("> "));
   Serial.println(F("> "));
   Serial.print(F("> Booting... Compiled: "));
   Serial.println(VERSION);
+#if defined(ESP8266) || defined(ESP32)
   Serial.print(F("> Node ID: "));
   Serial.println(getUniqueID());
   hostname += getUniqueID();
+#endif
 #ifdef VERBOSE
   Serial.print(("> Mode: "));
   Serial.print(F("VERBOSE "));
 #ifdef DEBUG
-  Serial.print(F("DEBUG "));
+  Serial.print(F("DEBUG"));
 #endif
 #ifdef GD0
   Serial.print(F("GD0"));
@@ -61,17 +72,10 @@ void setup()
 #endif
   Serial.println();
 #endif
-  initFS();
-  connectToWiFi();
-  mqttClient.setServer(mqtt_server, mqtt_port);
-  if (WiFi.status() == WL_CONNECTED)
-  {
-    connectToMqtt();
-    timeClient.begin();
-    timeClient.update();
-    myData.boottime = timeClient.getEpochTime();
-  }
-  initMDNS();
+}
+
+void initCC1101()
+{
   // Start CC1101
   Serial.print(F("> [CC1101] Initializing... "));
   int cc_state = ELECHOUSE_cc1101.getCC1101();
@@ -90,25 +94,12 @@ void setup()
   {
     Serial.print(F("ERR "));
     Serial.println(cc_state);
-
     reboot();
   }
-  // Initalize websocket
-  initWebSocket();
 }
 
-void loop()
+void processCC1101Data()
 {
-#if defined(ESP8266)
-  MDNS.update();
-#endif
-  ws.cleanupClients();
-  checkWiFi();
-  checkMqtt();
-#ifdef MARK
-  printMARK();
-#endif
-
 #ifdef GD0
   if (ELECHOUSE_cc1101.CheckReceiveFlag())
 #else
@@ -222,7 +213,7 @@ void loop()
 
         if (ccJson.containsKey("N") && !ccJson["N"].isNull())
         {
-          String topic = String(mqtt_topic) + "/" + String(ccJson["N"].as<String>()) + "/json";
+          String topic = String(MQTT_TOPIC) + "/" + String(ccJson["N"].as<String>()) + "/json";
           if (!mqttClient.connected())
           {
             Serial.println("> [MQTT] Not connected");
@@ -258,7 +249,6 @@ void loop()
 #endif
         // ccJsonStr = "";
         notifyClients();
-
       } // length 0
 #ifdef DEBUG_CRC
       else
@@ -298,4 +288,43 @@ void loop()
     }
 #endif
   }
+}
+
+void setup()
+{
+  initSerial();
+  printBootMsg();
+  initFS();
+  checkWiFi();
+  mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
+#ifdef MQTT_SUBSCRIBE
+  mqttClient.setCallback(onMqttMessage);
+#endif
+  if (WiFi.status() == WL_CONNECTED)
+  {
+    initMDNS();
+    connectToMqtt();
+    timeClient.begin();
+    timeClient.update();
+    myData.boottime = timeClient.getEpochTime();
+  }
+  // Init CC1101
+  initCC1101();
+  // Initalize websocket
+  initWebSocket();
+}
+
+void loop()
+{
+  ws.cleanupClients();
+#ifdef REQUIRES_INTERNET
+  checkWiFi();
+#endif
+  checkMqtt();
+#ifdef MARK
+  printMARK();
+#endif
+
+  // CC1101
+  processCC1101Data();
 }

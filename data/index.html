@@ -19,10 +19,10 @@
         <div class="row">
           <div class="col">
             <div id="hostname" class="display-6 text-center"></div>
-            <p id="desc" class="lead text-center">arduino cc1101 receiver</p>
+            <p id="desc" class="lead text-center"></p>
             <div>
               <table class="table table-hover mb-0">
-                <tbody>
+                <tbody id="statusbody">
                   <tr>
                     <th class="ps-3">
                       <span class="labelMqtt">SSID: </span>
@@ -60,6 +60,24 @@
                       <span class="labelTimestamp">Last Update: </span>
                     </th>
                     <td class="text-end"><span id="timestamp"></span></td>
+                  </tr>
+                  <tr id="carRow0">
+                    <th class="ps-3">
+                      <span class="labelgarageIsFull">Garage Full: </span>
+                    </th>
+                    <td class="text-end"><span id="garageisfull"></span></td>
+                  </tr>
+                  <tr id="carRow1">
+                    <th class="ps-3">
+                      <span class="labelcarIsPresent0">Car1: </span>
+                    </th>
+                    <td class="text-end"><span id="carispresent0"></span></td>
+                  </tr>
+                  <tr id="carRow2">
+                    <th class="ps-3">
+                      <span class="labelcarIsPresent1">Car2: </span>
+                    </th>
+                    <td class="text-end"><span id="carispresent1"></span></td>
                   </tr>
                 </tbody>
               </table>
@@ -109,8 +127,10 @@
         if (!element.classList.contains("border-danger")) {
           element.classList.add("border-danger");
         }
-        setTimeout(initWebSocket, 2000);
+        setTimeout(initWebSocket, 10000);
       }
+
+      let previousVersion = null;
 
       function onMessage(event) {
         const parsedData = JSON.parse(event.data);
@@ -118,6 +138,7 @@
 
         // Store references to frequently accessed elements
         const hostnameElement = document.getElementById("hostname");
+        const descElement = document.getElementById("desc");
         const ipElement = document.getElementById("ip");
         const ssidElement = document.getElementById("ssid");
         const resetreasonElement = document.getElementById("resetreason");
@@ -127,10 +148,19 @@
         const rssiElement = document.getElementById("rssi");
         const memFreeElement = document.getElementById("memfree");
         const memFragElement = document.getElementById("memfrag");
+        const garageIsFullElement = document.getElementById("garageisfull");
+        const carRowElements = [
+          document.getElementById("carRow0"),
+          document.getElementById("carRow1"),
+          document.getElementById("carRow2"),
+        ];
 
         if (parsedData.hostname) {
           document.querySelector("title").textContent = parsedData.hostname;
           hostnameElement.innerHTML = parsedData.hostname;
+        }
+        if (parsedData.desc) {
+          descElement.innerHTML = parsedData.desc;
         }
         if (parsedData.ip) {
           ipElement.innerHTML = parsedData.ip;
@@ -156,12 +186,18 @@
             ":" +
             timestamp.getSeconds().toString().padStart(2, "0");
         }
-
         if (parsedData.version) {
-          versionElement.innerHTML =
-            '<a href="/update.html" class="link-light link-offset-2 link-underline link-underline-opacity-0 text-muted small">' +
-            parsedData.version +
-            "</a>";
+          // Check if the version has changed
+          if (parsedData.version !== previousVersion) {
+            // Update the HTML element
+            versionElement.innerHTML =
+              '<a href="/update.html" class="link-light link-offset-2 link-underline link-underline-opacity-0 text-muted small">' +
+              parsedData.version +
+              "</a>";
+
+            // Update the previousVersion variable
+            previousVersion = parsedData.version;
+          }
         }
         if (parsedData.memfree) {
           memFreeElement.innerHTML =
@@ -171,25 +207,6 @@
           memFragElement.innerHTML = " (frag. " + parsedData.memfrag + "%)";
         }
 
-        // Uptime old
-        /*if (parsedData.uptime &&
-            parsedData.boottime !== null &&
-            parsedData.boottime !== "") {
-            const totalMinutes = parsedData.uptime;
-            const totalMinutesPerDay = 24 * 60;
-            const days = Math.floor(totalMinutes / totalMinutesPerDay);
-            const hours = Math.floor((totalMinutes % totalMinutesPerDay) / 60);
-            const minutes = totalMinutes % 60;
-
-            // Function to pad single-digit values with leading zeros
-            const padWithZero = (value) =>
-              value < 10 ? `0${value}` : `${value}`;
-
-            const formattedUptime = `${days ? days + "T" : ""}${padWithZero(
-              hours
-            )}:${padWithZero(minutes)}:01`;
-          uptimeElement.innerHTML = formattedUptime;
-        }*/
         // Uptime
         if (
           parsedData.boottime &&
@@ -231,6 +248,37 @@
         }
 
         if (
+          Array.isArray(parsedData.cars) &&
+          Array.isArray(parsedData.distances) &&
+          parsedData.cars.length === parsedData.distances.length
+        ) {
+          for (let i = 0; i < parsedData.cars.length; i++) {
+            const carIsPresentElement = document.getElementById(
+              `carispresent${i}`
+            );
+
+            if (carIsPresentElement) {
+              carIsPresentElement.innerHTML =
+                parsedData.cars[i] + " (" + parsedData.distances[i] + "cm)";
+            }
+          }
+        } else {
+          for (let i = 1; i < carRowElements.length; i++) {
+            carRowElements[i].style.display = "none";
+          }
+        }
+
+        if (
+          parsedData.garageFull != null &&
+          parsedData.garageFull !== undefined
+        ) {
+          garageIsFullElement.innerHTML = parsedData.garageFull;
+        } else {
+          for (let i = 0; i < carRowElements.length; i++) {
+            carRowElements[0].style.display = "none";
+          }
+        }
+        if (
           parsedData.packets &&
           parsedData.packets !== null &&
           parsedData.packets[0] !== ""
@@ -266,6 +314,16 @@
             .join("");
 
           packetsElement.innerHTML += listContent;
+        } else {
+          packetsElement.style.display = "none";
+        }
+      }
+
+      function checkAndToggleVisibility(rowElement, carData) {
+        // Check if carData exists
+        if (!carData) {
+          // If not, hide the <tr>
+          rowElement.style.display = "none";
         }
       }
 

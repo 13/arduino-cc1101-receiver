@@ -17,6 +17,19 @@ void reboot()
   ESP.restart();
 }
 
+// boolToString()
+const char* boolToString(boolean value) {
+  return value ? "true" : "false";
+}
+
+// Turn off builtin LED
+void turnOffLed()
+{
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, LOW);
+}
+
+
 // Initialize LittleFS
 void initFS()
 {
@@ -46,15 +59,19 @@ void getState()
     myData.mac = WiFi.macAddress();
     myData.ssid = WiFi.SSID();
     myData.rssi = WiFi.RSSI();
+    myData.desc = DEVICE_DESCRIPTION;
+    myData.hostname = hostname;
 #if defined(ESP8266)
-    myData.hostname = WiFi.hostname();
+    // myData.hostname = WiFi.hostname();
     myData.resetreason = ESP.getResetReason();
     myData.memfrag = ESP.getHeapFragmentation();
+    myData.cpu = String(ESP.getChipId());
 #endif
 #if defined(ESP32)
-    myData.hostname = WiFi.getHostname();
+    // myData.hostname = WiFi.getHostname();
     myData.resetreason = esp_reset_reason();
     myData.memfrag = ESP.getMaxAllocHeap();
+    myData.cpu = String(ESP.getChipModel()) + "(v" + String(ESP.getChipRevision()) + ")" + " CPU" + String(ESP.getChipCores());
 #endif
     myData.memfree = ESP.getFreeHeap();
     myData.uptime = countMsg;
@@ -75,7 +92,7 @@ void printMARK()
   {
     countMsg = 1;
   }
-  if (millis() - lastMillis >= INTERVAL_1MIN)
+  if (millis() - lastMillisMark >= INTERVAL_1MIN)
   {
     Serial.print(F("> [MARK] Uptime: "));
 
@@ -101,12 +118,25 @@ void printMARK()
       Serial.println(F("m"));
     }
     countMsg++;
-    lastMillis += INTERVAL_1MIN;
+    lastMillisMark += INTERVAL_1MIN;
 
     // 1 minute status update
-    connectToMqtt();
-    timeClient.update();
-    notifyClients();
+    if (WiFi.status() == WL_CONNECTED)
+    {
+      connectToMqtt();
+      timeClient.update();
+      notifyClients();
+    }
+#ifndef REQUIRES_INTERNET
+    if (countMsg % 1440 == 0)
+    {
+      checkWiFi();
+      if (WiFi.status() != WL_CONNECTED)
+      {
+        reboot();
+      }
+    }
+#endif
   }
 }
 
@@ -117,6 +147,14 @@ void checkWiFi()
   {
     connectToWiFi();
   }
+  else
+  {
+    if (WiFi.status() == WL_CONNECTED)
+    {
+      Serial.print("> [WiFi] IP: ");
+      Serial.println(WiFi.localIP().toString());
+    }
+  }
 }
 
 void connectToWiFi()
@@ -126,7 +164,7 @@ void connectToWiFi()
   WiFi.setAutoConnect(true);
   WiFi.setAutoReconnect(true);
   WiFi.hostname(hostname);
-  WiFi.begin(wifi_ssid, wifi_pass);
+  WiFi.begin(WIFI_SSID, WIFI_PASS);
   Serial.print("> [WiFi] Connecting...");
   for (int i = 0; i < 20; i++)
   {
@@ -146,7 +184,9 @@ void connectToWiFi()
     if (WiFi.localIP() == IPAddress(0, 0, 0, 0))
     {
       Serial.println(" NO DHCP LEASE");
+#ifdef REQUIRES_INTERNET
       reboot();
+#endif
     }
 
     getState();
@@ -154,36 +194,41 @@ void connectToWiFi()
   else
   {
     Serial.println(" ERR TIMEOUT");
+#ifdef REQUIRES_INTERNET
     reboot();
+#endif
   }
 }
 
 // MQTT
 void checkMqtt()
 {
-  if (!mqttClient.connected())
+  if (WiFi.status() == WL_CONNECTED)
   {
-    Serial.println("> [MQTT] Not connected loop");
-    long mqttNow = millis();
-    if (mqttNow - mqttLastReconnectAttempt > 5000)
+    if (!mqttClient.connected())
     {
-      mqttLastReconnectAttempt = mqttNow;
-      // Attempt to reconnect
-      if (connectToMqtt())
+      Serial.println("> [MQTT] Not connected loop");
+      long mqttNow = millis();
+      if (mqttNow - mqttLastReconnectAttempt > 5000)
       {
-        mqttLastReconnectAttempt = 0;
+        mqttLastReconnectAttempt = mqttNow;
+        // Attempt to reconnect
+        if (connectToMqtt())
+        {
+          mqttLastReconnectAttempt = 0;
+        }
       }
     }
-  }
-  else
-  {
-    mqttClient.loop();
+    else
+    {
+      mqttClient.loop();
+    }
   }
 }
 
 boolean connectToMqtt()
 {
-  String lastWillTopic = mqtt_topic_lwt;
+  String lastWillTopic = MQTT_TOPIC_LWT;
   lastWillTopic += "/";
   lastWillTopic += hostname;
   String ipTopic = lastWillTopic;
@@ -201,6 +246,12 @@ boolean connectToMqtt()
       mqttClient.publish(lastWillTopic.c_str(), "online", true);
       mqttClient.publish(ipTopic.c_str(), WiFi.localIP().toString().c_str(), true);
       mqttClient.publish(versionTopic.c_str(), VERSION, true);
+#ifdef MQTT_SUBSCRIBE
+      if (mqtt_topics[0] != NULL)
+      {
+        subscribeMqtt();
+      }
+#endif
     }
     else
     {
@@ -215,8 +266,23 @@ boolean connectToMqtt()
     mqttClient.publish(ipTopic.c_str(), WiFi.localIP().toString().c_str(), true);
     mqttClient.publish(versionTopic.c_str(), VERSION, true);
   }
+
   return mqttClient.connected();
 }
+
+#ifdef MQTT_SUBSCRIBE
+void subscribeMqtt()
+{
+  // int numTopics = sizeof(mqtt_topics) / sizeof(mqtt_topics[0]);
+  for (int i = 0; mqtt_topics[i] != NULL; i++)
+  {
+    Serial.print("[MQTT]: Subscribing ");
+    Serial.print(mqtt_topics[i]);
+    Serial.println(" ... OK");
+    mqttClient.subscribe(mqtt_topics[i]);
+  }
+}
+#endif
 
 // http & websocket
 String wsSerializeJson()
@@ -228,7 +294,8 @@ String wsSerializeJson()
   myData.memfrag = ESP.getHeapFragmentation();
 #endif
 #if defined(ESP32)
-  myData.memfrag = ESP.getMaxAllocHeap();
+  uint8_t fragmentationPercentage = static_cast<uint8_t>((100 * (myData.memfree - ESP.getMaxAllocHeap())) / myData.memfree);
+  myData.memfrag = fragmentationPercentage;
 #endif
   myData.timestamp = timeClient.getEpochTime();
   String jsonStr = myData.toJson();
@@ -302,17 +369,11 @@ void initWebSocket()
   server.on("/reboot", HTTP_GET, [](AsyncWebServerRequest *request)
             {
           AsyncWebServerResponse *response;
-          if (myData.uptime > 2) {
             response = request->beginResponse(200, "application/json", "{\"reboot\":true,\"message\":\"Rebooting...\"}");
             response->addHeader("Connection", "close");
             request->send(response);
             Serial.println(F("> [HTTP] Rebooting..."));
-            reboot();
-          } else {
-            response = request->beginResponse(200, "application/json", "{\"reboot\":false,\"message\":\"Uptime less than or equal to 2, not rebooting.\"}");
-            response->addHeader("Connection", "close");
-            request->send(response);
-          } });
+            reboot(); });
   server.on("/update.html", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send(LittleFS, "/update.html", "text/html"); });
   server.on(

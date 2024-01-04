@@ -1,20 +1,38 @@
-#define VERBOSE
-//#define DEBUG
-//#define DEBUG_CRC
+#ifndef CREDENTIALS_H
+#define CREDENTIALS_H
 
+#define VERBOSE
+// #define DEBUG
+// #define DEBUG_CRC
+#define REQUIRES_INTERNET
+// #define MQTT_SUBSCRIBE
+
+/* Sensor */
+#define S_CC1101
+// #define S_PARKING2
+
+/* Device */
+#define DEVICE_DESCRIPTION "arduino cc1101 receiver"
+
+/* WiFi */
+#define WIFI_SSID "network"
+#define WIFI_PASS ""
+
+/* MQTT server credentials */
+#define MQTT_USER ""
+#define MQTT_PASS ""
+#define MQTT_SERVER "192.168.22.5"
+#define MQTT_TOPIC "muh/sensors"
+#define MQTT_TOPIC_LWT "muh/esp"
+#define MQTT_PORT 1883
+
+#ifdef S_CC1101
+/* CC1101 */
 #define CC_FREQ 868.32
 #define CC_POWER 12
 #define CC_DELAY 200
-
-/* WiFi */
-const char* wifi_ssid = "network";
-const char* wifi_pass  = "";
-/* MQTT server credentials */
-const char* mqtt_user = "";
-const char* mqtt_pass = "";
-const char* mqtt_server = "192.168.22.5";
-const char* mqtt_topic = "muh/sensors";
-const char* mqtt_topic_lwt = "muh/esp";
-uint16_t mqtt_port = 1883;
 // #define GD0 5 /* Bug with ESP8266 */
 #define WSPACKETS
+#endif
+
+#endif // CREDENTIALS_H

@@ -19,7 +19,7 @@
         <div class="row">
           <div class="col">
             <div id="hostname" class="display-6 text-center"></div>
-            <p id="desc" class="lead text-center">arduino cc1101 receiver</p>
+            <p id="desc" class="lead text-center"></p>
             <div class="d-grid gap-2 col-md-6 mx-auto">
               <form
                 id="updateForm"
@@ -62,7 +62,7 @@
                     >
                       <span class="visually-hidden">Loading...</span>
                     </div>
-                    <p id="updateModalMessage" class="m-0">Updating...</p>
+                    <p id="updateModalMessage" class="m-0"></p>
                   </div>
                 </div>
               </div>
@@ -81,6 +81,7 @@
     <script>
       var gateway = `ws://${window.location.hostname}/ws`;
       var websocket;
+      var reconnectTime = 10000;
 
       function initWebSocket() {
         console.log("Trying to open a WebSocket connection...");
@@ -88,6 +89,13 @@
         websocket.onopen = onOpen;
         websocket.onclose = onClose;
         websocket.onmessage = onMessage;
+      }
+
+      function closeWebSocket() {
+        if (websocket) {
+          console.log("Closing WebSocket connection...");
+          websocket.close();
+        }
       }
 
       function onOpen(event) {
@@ -110,8 +118,10 @@
         if (!element.classList.contains("border-danger")) {
           element.classList.add("border-danger");
         }
-        setTimeout(initWebSocket, 2000);
+        setTimeout(initWebSocket, reconnectTime);
       }
+
+      let previousVersion = null;
 
       function onMessage(event) {
         const parsedData = JSON.parse(event.data);
@@ -119,32 +129,44 @@
 
         // Store references to frequently accessed elements
         const hostnameElement = document.getElementById("hostname");
+        const descElement = document.getElementById("desc");
         const versionElement = document.getElementById("version");
-        const updateStatusElement = document.getElementById("updateStatus");
-        const updateModalMessage =
-          document.getElementById("updateModalMessage");
-        const loadingSpinner = document.getElementById("loadingSpinner");
 
         if (parsedData.hostname) {
           document.querySelector("title").textContent = parsedData.hostname;
           hostnameElement.innerHTML = parsedData.hostname;
         }
+        if (parsedData.desc) {
+          descElement.innerHTML = parsedData.desc;
+        }
         if (parsedData.version) {
-          versionElement.innerHTML =
-            '<a href="/update.html" class="link-light link-offset-2 link-underline link-underline-opacity-0 text-muted small">' +
-            parsedData.version +
-            "</a>";
+          // Check if the version has changed
+          if (parsedData.version !== previousVersion) {
+            // Update the HTML element
+            versionElement.innerHTML =
+              '<a href="/update.html" class="link-light link-offset-2 link-underline link-underline-opacity-0 text-muted small">' +
+              parsedData.version +
+              "</a>";
+
+            // Update the previousVersion variable
+            previousVersion = parsedData.version;
+          }
         }
       }
 
       function performFirmwareUpdate(event) {
         event.preventDefault();
+        //closeWebSocket();
 
         // Display the Bootstrap modal when the firmware update starts
         showUpdateModal();
 
         // Assuming you have a form with the ID "updateForm"
         const form = document.getElementById("updateForm");
+        const fileInput = document.getElementById("file");
+        const updateModalMessage =
+          document.getElementById("updateModalMessage");
+
         const formData = new FormData(form);
 
         // Display the loading spinner while the update is in progress
@@ -159,8 +181,6 @@
             // Check if the firmware update was successful
             if (data.success) {
               // Update the content of the modal with the success message and set the color to green
-              const updateModalMessage =
-                document.getElementById("updateModalMessage");
               updateModalMessage.innerHTML = `<p class="text-success m-0">${data.message}</p><p class="m-0">Rebooting...</p>`;
               // Trigger a reboot after a successful update
               fetch("/reboot")
@@ -179,8 +199,6 @@
                 });
             } else {
               // Update the content of the modal with the error message and set the color to red
-              const updateModalMessage =
-                document.getElementById("updateModalMessage");
               updateModalMessage.innerHTML = `<p class="text-danger m-0">Error: ${data.message}</p>`;
               setTimeout(hideUpdateModal, 5000);
             }
@@ -188,8 +206,6 @@
           .catch((error) => {
             console.error("Error:", error);
             // Update the content of the modal with the error message and set the color to red
-            const updateModalMessage =
-              document.getElementById("updateModalMessage");
             updateModalMessage.innerHTML =
               '<p class="text-danger m-0">Update failed</p>';
             // If there was an error, hide the modal immediately
@@ -263,6 +279,20 @@
 
         // Assuming you have a form with the ID "updateForm"
         const updateForm = document.getElementById("updateForm");
+        const fileInput = document.getElementById("file");
+        const updateModalMessage =
+          document.getElementById("updateModalMessage");
+
+        // Add an event listener to the file input
+        fileInput.addEventListener("change", function (event) {
+          // Get the selected file name
+          const fileName = event.target.files[0].name;
+
+          // Update the updateModalMessage with the file name
+          updateModalMessage.innerHTML = `<p class="m-0">Updating...</p><p class="m-0">${fileName}</p>`;
+        });
+
+        // Assuming you have a form with the ID "updateForm"
         updateForm.addEventListener("submit", performFirmwareUpdate);
       }
     </script>
