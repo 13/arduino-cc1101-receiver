@@ -168,6 +168,8 @@ void processCC1101Data()
         input_str += String(lqi);
         input_str += ",RN:";
         input_str += getUniqueID();
+        input_str += ",PID:";
+        input_str += getPID();
         // Serial.println(input_str);
 
         StaticJsonDocument<256> ccJson;
@@ -219,10 +221,16 @@ void processCC1101Data()
             Serial.println("> [MQTT] Not connected");
             connectToMqtt();
           }
-          bool published = mqttClient.publish(topic.c_str(), ccJsonStr.c_str(), true);
+          boolean retained = !(ccJson.containsKey("R") && !ccJson["R"].isNull());
+          boolean published = mqttClient.publish(topic.c_str(), ccJsonStr.c_str(), retained);
+          // Check if published
           if (published)
           {
-            Serial.println("> [MQTT] Message published");
+            Serial.print("> [MQTT] Message published");
+            if (retained) {
+              Serial.print(" retained");
+            }
+            Serial.println("");
           }
           else
           {
@@ -302,11 +310,11 @@ void setup()
 #endif
   if (WiFi.status() == WL_CONNECTED)
   {
-    initMDNS();
     connectToMqtt();
     timeClient.begin();
     timeClient.update();
     myData.boottime = timeClient.getEpochTime();
+    initMDNS();
   }
   // Init CC1101
   initCC1101();

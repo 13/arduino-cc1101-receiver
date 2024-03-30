@@ -9,6 +9,14 @@ String getUniqueID()
   return uid;
 }
 
+// Generate Random Packet ID
+String getPID()
+{
+  randomSeed(analogRead(0));
+  long randNumber = random(256, 4096);
+  return randNumber;
+}
+
 // Reboot
 void reboot()
 {
@@ -18,7 +26,8 @@ void reboot()
 }
 
 // boolToString()
-const char* boolToString(boolean value) {
+const char *boolToString(boolean value)
+{
   return value ? "true" : "false";
 }
 
@@ -28,7 +37,6 @@ void turnOffLed()
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, LOW);
 }
-
 
 // Initialize LittleFS
 void initFS()
@@ -47,7 +55,14 @@ void initMDNS()
   {
     Serial.println(F("> [mDNS] ERROR"));
   }
-  MDNS.addService("http", "tcp", 80);
+  else
+  {
+    Serial.println(F("> [mDNS] Starting... OK"));
+    Serial.print(F("> [mDNS] http://"));
+    Serial.print(hostname.c_str());
+    Serial.println(F(".muh"));
+    MDNS.addService("http", "tcp", 80);
+  }
 }
 
 // Get state
