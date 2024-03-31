@@ -24,7 +24,6 @@
 #include <WiFiUdp.h>
 #include "../../include/version.h"
 #include <wsData.h>
-#include <NodeManager.h>
 
 #define INTERVAL_1MIN (1 * 60 * 1000L)
 
@@ -37,7 +36,6 @@ extern String hostname;
 extern uint32_t countMsg;
 extern unsigned long lastMillisMark;
 extern wsData myData;
-extern Node myNode;
 extern long mqttLastReconnectAttempt;
 
 // http & websocket

@@ -2,7 +2,6 @@
 #include <ELECHOUSE_CC1101_SRC_DRV.h>
 #include "../include/version.h"
 #include <wsData.h>
-#include <NodeManager.h>
 #include <helpers.h>
 #include "credentials.h"
 
@@ -74,6 +73,115 @@ void printBootMsg()
   Serial.println();
 #endif
 }
+
+#ifdef MQTT_SUBSCRIBE
+// Define constants for maximum values
+const int MAX_PACKET_NODES = 32; // Adjust as needed
+const int MAX_N_LENGTH = 8;
+
+// Define struct to hold N and X pairs
+struct Packet
+{
+  char N[MAX_N_LENGTH + 1]; // +1 for null terminator
+  int X;
+};
+
+// Array to store pairs
+Packet packets[MAX_PACKET_NODES];
+int packetCount = 0;
+
+bool packetExists(const char *N)
+{
+  for (int i = 0; i < packetCount; ++i)
+  {
+    if (strcmp(packets[i].N, N) == 0)
+    {
+      // Packet with N and X values exists
+      return true;
+    }
+  }
+  // Packet with N and X values does not exist
+  return false;
+}
+
+bool packetExists(const char *N, int X)
+{
+  for (int i = 0; i < packetCount; ++i)
+  {
+    if (strcmp(packets[i].N, N) == 0 && packets[i].X == X)
+    {
+      // Packet with N and X values exists
+      return true;
+    }
+  }
+  // Packet with N and X values does not exist
+  return false;
+}
+
+void printPackets()
+{
+  Serial.println("[Packets] ");
+  for (int i = 0; i < packetCount; ++i)
+  {
+    Serial.print("N: ");
+    Serial.print(packets[i].N);
+    Serial.print(", X: ");
+    Serial.println(packets[i].X);
+  }
+}
+
+void onMqttMessage(char *topic, byte *payload, unsigned int len)
+{
+  // Parse the JSON data
+  StaticJsonDocument<200> doc;
+  deserializeJson(doc, payload, len);
+#ifdef DEBUG
+  serializeJsonPretty(doc, Serial);
+  Serial.println();
+#endif
+
+  if (doc.containsKey("N") && doc.containsKey("X") && packetCount < MAX_PACKETS)
+  {
+    String N = doc["N"];
+    int X = doc["X"];
+
+    // Check if packet with N and X values already exists
+    if (packetExists(N.c_str()))
+    {
+      // Packet already exists, update X value
+      for (int i = 0; i < packetCount; ++i)
+      {
+        if (strcmp(packets[i].N, N.c_str()) == 0)
+        {
+          packets[i].X = X;
+          Serial.print(("> [PID] Updated N:"));
+          Serial.print(N.c_str());
+          Serial.print(",X:");
+          Serial.println(X);
+          break;
+        }
+      }
+    }
+    else
+    {
+      // Packet does not exist, add it to the array
+      if (packetCount < MAX_PACKETS)
+      {
+        Serial.print(("> [PID] Adding N:"));
+        Serial.print(N.c_str());
+        Serial.print(",X:");
+        Serial.println(X);
+        // Add the packet to the array
+        strncpy(packets[packetCount].N, N.c_str(), MAX_N_LENGTH);
+        packets[packetCount].N[MAX_N_LENGTH] = '\0'; // Ensure null termination
+        packets[packetCount].X = X;
+        packetCount++;
+      }
+    }
+  }
+  printPackets();
+}
+#endif
 
 void initCC1101()
 {
@@ -220,8 +328,32 @@ void processCC1101Data()
             Serial.println("> [MQTT] Not connected");
             connectToMqtt();
           }
+
+          boolean publishMqtt = true;
+          boolean published = true;
           boolean retained = !(ccJson.containsKey("R") && !ccJson["R"].isNull());
-          boolean published = mqttClient.publish(topic.c_str(), ccJsonStr.c_str(), retained);
+
+#ifdef MQTT_SUBSCRIBE
+          if (ccJson.containsKey("X") && !ccJson["X"].isNull())
+          {
+            publishMqtt = !packetExists(ccJson["N"], ccJson["X"]);
+          }
+#endif
+
+          if (publishMqtt)
+          {
+            published = mqttClient.publish(topic.c_str(), ccJsonStr.c_str(), retained);
+          }
+#ifdef MQTT_SUBSCRIBE
+          else
+          {
+            Serial.print(("> [PID] Exists N:"));
+            Serial.print(String(ccJson["N"].as<String>()));
+            Serial.print(", X:");
+            Serial.println(String(ccJson["X"].as<String>()));
+            published = false;
+          }
+#endif
           // Check if published
           if (published)
           {
@@ -234,7 +366,7 @@ void processCC1101Data()
           }
           else
           {
-            Serial.println("> [MQTT] Failed to publish message");
+            Serial.println("> [MQTT] No publish message");
           }
         }
 
@@ -297,30 +429,6 @@ void processCC1101Data()
 #endif
   }
 }
-
-#ifdef MQTT_SUBSCRIBE
-void onMqttMessage(char *topic, byte *payload, unsigned int len)
-{
-  /*Serial.print("Received message on topic: ");
-  Serial.print(topic);
-  Serial.print(", payload: ");
-  for (int i = 0; i < length; i++) {
-    Serial.print((char)payload[i]);
-  }
-  Serial.println();*/
-
-  // Parse the JSON data
-  StaticJsonDocument<200> doc;
-  deserializeJson(doc, payload, len);
-  serializeJsonPretty(doc, Serial);
-  Serial.println();
-
-  if (doc.containsKey("N") && doc.containsKey("X"))
-  {
-
-  }
-}
-#endif
 
 void setup()
 {

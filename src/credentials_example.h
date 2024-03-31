@@ -12,10 +12,10 @@
 // #define S_PARKING2
 
 /* Device */
-#define DEVICE_DESCRIPTION "arduino cc1101 receiver"
+#define DEVICE_DESCRIPTION "Dachboden"
 
 /* WiFi */
-#define WIFI_SSID "network"
+#define WIFI_SSID "muhxnetwork"
 #define WIFI_PASS ""
 
 /* MQTT server credentials */
@@ -25,6 +25,9 @@
 #define MQTT_TOPIC "muh/sensors"
 #define MQTT_TOPIC_LWT "muh/esp"
 #define MQTT_PORT 1883
+#ifdef MQTT_SUBSCRIBE
+#define MQTT_SUBSCRIBE_TOPIC "muh/sensors/#"
+#endif
 
 #ifdef S_CC1101
 /* CC1101 */

@@ -294,9 +294,9 @@ void subscribeMqtt()
     mqttClient.subscribe(mqtt_topics[i]);
   }*/
 #ifdef MQTT_SUBSCRIBE_TOPIC
-  Serial.print("[MQTT]: Subscribing ");
+  Serial.print("> [MQTT] Subscribing... ");
   Serial.print(MQTT_SUBSCRIBE_TOPIC);
-  Serial.println(" ... OK");
+  Serial.println(" OK");
   mqttClient.subscribe(MQTT_SUBSCRIBE_TOPIC);
 #endif
 }
