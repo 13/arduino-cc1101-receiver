@@ -10,9 +10,9 @@ String getUniqueID()
 }
 
 // Generate Random Packet ID
-String getPID()
+int getPID(int num)
 {
-  randomSeed(analogRead(0));
+  randomSeed(num);
   long randNumber = random(256, 4096);
   return randNumber;
 }

@@ -169,10 +169,10 @@ void processCC1101Data()
         input_str += ",RN:";
         input_str += getUniqueID();
         input_str += ",PID:";
-        input_str += getPID();
+        input_str += String(getPID(int(lqi-rssi)), HEX);
         // Serial.println(input_str);
 
-        StaticJsonDocument<256> ccJson;
+        StaticJsonDocument<384> ccJson;
         // Split the input string into key-value pairs using comma separator
         uint8_t pos = 0;
         while (pos < input_str.length())
@@ -188,7 +188,7 @@ void processCC1101Data()
           {
             String key = pair.substring(0, colon_pos);
             String value_str = pair.substring(colon_pos + 1);
-            if (key.startsWith("N") || key.startsWith("RN") || key.startsWith("F") || key.startsWith("RF"))
+            if (key.startsWith("N") || key.startsWith("RN") || key.startsWith("F") || key.startsWith("RF") || key.startsWith("PID"))
             {
               ccJson[key] = value_str;
             }

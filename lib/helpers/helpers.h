@@ -45,7 +45,7 @@ extern uint8_t connectedClients;
 
 // core
 String getUniqueID();
-String getPID();
+int getPID(int num);
 void getState();
 void reboot();
 const char* boolToString(boolean value);

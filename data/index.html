@@ -214,6 +214,7 @@
           parsedData.boottime !== null &&
           parsedData.boottime !== ""
         ) {
+          if (parsedData.boottime > 1577836800){
           var currentUnixTime = Math.floor(Date.now() / 1000 + 3600);
           var uptimeInSeconds = currentUnixTime - parsedData.boottime;
           var days = Math.floor(uptimeInSeconds / (24 * 60 * 60));
@@ -230,6 +231,9 @@
             minutes.toString().padStart(2, "0") +
             ":" +
             seconds.toString().padStart(2, "0");
+          } else {
+            var formattedUptime = "0T00:00:01";
+          }
 
           uptimeElement.innerHTML = formattedUptime;
         }
