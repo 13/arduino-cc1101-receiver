@@ -308,7 +308,7 @@
                 packetTs.getSeconds().toString().padStart(2, "0");
 
               delete packetData.timestamp;
-              const tsPair = { X: formattedPacketTs };
+              const tsPair = { D: formattedPacketTs };
               const newPacketData = { ...tsPair, ...packetData };
               const serializedData = JSON.stringify(newPacketData);
               return (

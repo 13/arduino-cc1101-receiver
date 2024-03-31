@@ -9,14 +9,6 @@ String getUniqueID()
   return uid;
 }
 
-// Generate Random Packet ID
-int getPID(int num)
-{
-  randomSeed(num);
-  long randNumber = random(256, 4096);
-  return randNumber;
-}
-
 // Reboot
 void reboot()
 {
@@ -264,10 +256,13 @@ boolean connectToMqtt()
       mqttClient.publish(ipTopic.c_str(), WiFi.localIP().toString().c_str(), true);
       mqttClient.publish(versionTopic.c_str(), VERSION, true);
 #ifdef MQTT_SUBSCRIBE
-      if (mqtt_topics[0] != NULL)
+      /*if (mqtt_topics[0] != NULL)
       {
         subscribeMqtt();
-      }
+      }*/
+#ifdef MQTT_SUBSCRIBE_TOPIC
+      subscribeMqtt();
+#endif
 #endif
     }
     else
@@ -291,13 +286,19 @@ boolean connectToMqtt()
 void subscribeMqtt()
 {
   // int numTopics = sizeof(mqtt_topics) / sizeof(mqtt_topics[0]);
-  for (int i = 0; mqtt_topics[i] != NULL; i++)
+  /*for (int i = 0; mqtt_topics[i] != NULL; i++)
   {
     Serial.print("[MQTT]: Subscribing ");
     Serial.print(mqtt_topics[i]);
     Serial.println(" ... OK");
     mqttClient.subscribe(mqtt_topics[i]);
-  }
+  }*/
+#ifdef MQTT_SUBSCRIBE_TOPIC
+  Serial.print("[MQTT]: Subscribing ");
+  Serial.print(MQTT_SUBSCRIBE_TOPIC);
+  Serial.println(" ... OK");
+  mqttClient.subscribe(MQTT_SUBSCRIBE_TOPIC);
+#endif
 }
 #endif
 

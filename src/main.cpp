@@ -2,6 +2,7 @@
 #include <ELECHOUSE_CC1101_SRC_DRV.h>
 #include "../include/version.h"
 #include <wsData.h>
+#include <NodeManager.h>
 #include <helpers.h>
 #include "credentials.h"
 
@@ -168,8 +169,6 @@ void processCC1101Data()
         input_str += String(lqi);
         input_str += ",RN:";
         input_str += getUniqueID();
-        input_str += ",PID:";
-        input_str += String(getPID(int(lqi-rssi)), HEX);
         // Serial.println(input_str);
 
         StaticJsonDocument<384> ccJson;
@@ -188,7 +187,7 @@ void processCC1101Data()
           {
             String key = pair.substring(0, colon_pos);
             String value_str = pair.substring(colon_pos + 1);
-            if (key.startsWith("N") || key.startsWith("RN") || key.startsWith("F") || key.startsWith("RF") || key.startsWith("PID"))
+            if (key.startsWith("N") || key.startsWith("RN") || key.startsWith("F") || key.startsWith("RF"))
             {
               ccJson[key] = value_str;
             }
@@ -227,7 +226,8 @@ void processCC1101Data()
           if (published)
           {
             Serial.print("> [MQTT] Message published");
-            if (retained) {
+            if (retained)
+            {
               Serial.print(" retained");
             }
             Serial.println("");
@@ -298,6 +298,30 @@ void processCC1101Data()
   }
 }
 
+#ifdef MQTT_SUBSCRIBE
+void onMqttMessage(char *topic, byte *payload, unsigned int len)
+{
+  /*Serial.print("Received message on topic: ");
+  Serial.print(topic);
+  Serial.print(", payload: ");
+  for (int i = 0; i < length; i++) {
+    Serial.print((char)payload[i]);
+  }
+  Serial.println();*/
+
+  // Parse the JSON data
+  StaticJsonDocument<200> doc;
+  deserializeJson(doc, payload, len);
+  serializeJsonPretty(doc, Serial);
+  Serial.println();
+
+  if (doc.containsKey("N") && doc.containsKey("X"))
+  {
+
+  }
+}
+#endif
+
 void setup()
 {
   initSerial();
@@ -305,16 +329,16 @@ void setup()
   initFS();
   checkWiFi();
   mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
-#ifdef MQTT_SUBSCRIBE
-  mqttClient.setCallback(onMqttMessage);
-#endif
   if (WiFi.status() == WL_CONNECTED)
   {
+    initMDNS();
     connectToMqtt();
+#ifdef MQTT_SUBSCRIBE
+    mqttClient.setCallback(onMqttMessage);
+#endif
     timeClient.begin();
     timeClient.update();
     myData.boottime = timeClient.getEpochTime();
-    initMDNS();
   }
   // Init CC1101
   initCC1101();
