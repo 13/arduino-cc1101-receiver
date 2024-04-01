@@ -153,11 +153,13 @@ void onMqttMessage(char *topic, byte *payload, unsigned int len)
       {
         if (strcmp(packets[i].N, N.c_str()) == 0)
         {
-          packets[i].X = X;
-          Serial.print(("> [PID] Updated N:"));
+#ifdef DEBUG
+          Serial.print(("> [PID] Update N:"));
           Serial.print(N.c_str());
           Serial.print(",X:");
           Serial.println(X);
+#endif
+          packets[i].X = X;
           break;
         }
       }
@@ -167,10 +169,12 @@ void onMqttMessage(char *topic, byte *payload, unsigned int len)
       // Packet does not exist, add it to the array
       if (packetCount < MAX_PACKETS)
       {
-        Serial.print(("> [PID] Adding N:"));
+#ifdef DEBUG
+        Serial.print(("> [PID] Add N:"));
         Serial.print(N.c_str());
         Serial.print(",X:");
         Serial.println(X);
+#endif
         // Add the packet to the array
         strncpy(packets[packetCount].N, N.c_str(), MAX_N_LENGTH);
         packets[packetCount].N[MAX_N_LENGTH] = '\0'; // Ensure null termination
@@ -179,7 +183,9 @@ void onMqttMessage(char *topic, byte *payload, unsigned int len)
       }
     }
   }
+#ifdef DEBUG
   printPackets();
+#endif
 }
 #endif
 
