@@ -36,10 +36,11 @@ uint8_t connectedClients = 0;
 unsigned long previousMinute = 0;
 
 #ifdef USE_CRYPTO
-byte aeskey[16] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F};
+byte aeskey[16] = AES_KEY;
 byte cipher[61];
 byte decryptedText[61];
 AES128 aes128;
+boolean crypto = false;
 #endif
 
 // supplementary functions
@@ -75,11 +76,14 @@ void printBootMsg()
 #ifdef VERBOSE
   Serial.print(("> Mode: "));
   Serial.print(F("VERBOSE "));
+#ifdef USE_CRYPTO
+  Serial.print(F("CRYPTO "));
+#endif
 #ifdef DEBUG
-  Serial.print(F("DEBUG"));
+  Serial.print(F("DEBUG "));
 #endif
 #ifdef GD0
-  Serial.print(F("GD0"));
+  Serial.print(F(" GD0"));
   Serial.print(GD0);
 #endif
   Serial.println();
@@ -269,38 +273,79 @@ void processCC1101Data()
 #endif
 
 #ifdef USE_CRYPTO
-      // Decrypt the cipher
-      aes128.decryptBlock(decryptedText, byteArr);
-
-      int blockCount = byteArrLen / 16 + 1;
-      for (int i = 0; i < blockCount; ++i)
+      if (!(sizeof(byteArr) >= 4 && byteArr[0] == 'Z' && byteArr[1] == ':' && isdigit(byteArr[2]) && isdigit(byteArr[3])))
       {
-        aes128.decryptBlock(&decryptedText[i * 16], &byteArr[i * 16]);
-      }
+        Serial.print(F("> [CRYPTO] Decrypting: "));
+        // Decrypt the cipher
+        aes128.decryptBlock(decryptedText, byteArr);
 
-      Serial.print("Dec: ");
-      for (int i = 0; i < sizeof(decryptedText); i++)
-      {
-        Serial.write(decryptedText[i]);
+        int blockCount = byteArrLen / 16 + 1;
+        for (int i = 0; i < blockCount; ++i)
+        {
+          aes128.decryptBlock(&decryptedText[i * 16], &byteArr[i * 16]);
+        }
+
+        for (int i = 0; i < sizeof(decryptedText); i++)
+        {
+          Serial.print((char)decryptedText[i]);
+        }
+        Serial.println();
+
+        // Check if decryptedText meets the specified conditions
+        if (sizeof(decryptedText) >= 4 && decryptedText[0] == 'Z' && decryptedText[1] == ':' && isdigit(decryptedText[2]) && isdigit(decryptedText[3]))
+        {
+          Serial.println(F("> [CRYPTO] Decryption successful."));
+          // Extracting third and fourth characters and converting to integer
+          byteArrLen = (decryptedText[2] - '0') * 10 + (decryptedText[3] - '0');
+#ifdef DEBUG
+          Serial.print(F("> [CRYPTO] Length: "));
+          Serial.println(byteArrLen);
+#endif
+          crypto = true;
+        }
       }
-      Serial.println();
 #endif
 
       String input_str = "";
+
       if (byteArrLen > 0 && byteArrLen <= byteArrSize)
       {
-        for (uint8_t i = 0; i < byteArrLen; i++)
+#ifdef USE_CRYPTO
+        if (!crypto)
         {
-          // Filter [0-9A-Za-z,:]
-          if ((byteArr[i] >= '0' && byteArr[i] <= '9') ||
-              (byteArr[i] >= 'A' && byteArr[i] <= 'Z') ||
-              (byteArr[i] >= 'a' && byteArr[i] <= 'z') ||
-              byteArr[i] == ',' || byteArr[i] == ':' || byteArr[i] == '-')
+#endif
+          for (uint8_t i = 0; i < byteArrLen; i++)
           {
-            Serial.print((char)byteArr[i]);
-            input_str += (char)byteArr[i];
+            // Filter [0-9A-Za-z,:]
+            if ((byteArr[i] >= '0' && byteArr[i] <= '9') ||
+                (byteArr[i] >= 'A' && byteArr[i] <= 'Z') ||
+                (byteArr[i] >= 'a' && byteArr[i] <= 'z') ||
+                byteArr[i] == ',' || byteArr[i] == ':' || byteArr[i] == '-')
+            {
+              Serial.print((char)byteArr[i]);
+              input_str += (char)byteArr[i];
+            }
           }
+#ifdef USE_CRYPTO
         }
+        else
+        {
+          for (uint8_t i = 0; i < byteArrLen; i++)
+          {
+            // Filter [0-9A-Za-z,:]
+            if ((decryptedText[i] >= '0' && decryptedText[i] <= '9') ||
+                (decryptedText[i] >= 'A' && decryptedText[i] <= 'Z') ||
+                (decryptedText[i] >= 'a' && decryptedText[i] <= 'z') ||
+                decryptedText[i] == ',' || decryptedText[i] == ':' || decryptedText[i] == '-')
+            {
+              Serial.print((char)decryptedText[i]);
+              input_str += (char)decryptedText[i];
+            }
+          }
+          crypto = false;
+        }
+#endif
+
         Serial.print(F(",RSSI:"));
         Serial.print(rssi);
         Serial.print(F(",LQI:"));
