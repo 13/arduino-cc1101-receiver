@@ -36,11 +36,39 @@ uint8_t connectedClients = 0;
 unsigned long previousMinute = 0;
 
 #ifdef USE_CRYPTO
-byte aeskey[16] = AES_KEY;
+byte aeskey[16];
 byte cipher[61];
 byte decryptedText[61];
 AES128 aes128;
 boolean crypto = false;
+
+void hexStringToByteArray(const char *hexString, byte *byteArray, size_t byteArrayLength)
+{
+  size_t hexStringLength = strlen(hexString);
+
+  if (hexStringLength % 2 != 0 || hexStringLength / 2 != byteArrayLength)
+  {
+    Serial.print(F("CRYPTO: KEY INVALID"));
+    // Invalid hex string length or mismatch with byte array length
+    return;
+  }
+#ifdef DEBUG
+  Serial.print(F("CRYPTO: KEY "));
+#endif
+  for (size_t i = 0; i < hexStringLength; i += 2)
+  {
+    // Convert each pair of hexadecimal characters to a byte
+    sscanf(hexString + i, "%2hhx", &byteArray[i / 2]);
+#ifdef DEBUG
+    Serial.print(F("0x"));
+    Serial.print(byteArray[i / 2], HEX);
+    Serial.print(F(" "));
+#endif
+  }
+#ifdef DEBUG
+  Serial.println();
+#endif
+}
 #endif
 
 // supplementary functions
@@ -518,6 +546,7 @@ void setup()
   printBootMsg();
   initFS();
 #ifdef USE_CRYPTO
+  hexStringToByteArray(AES_KEY, aeskey, 16);
   aes128.setKey(aeskey, 16); // Setting Key for AES
 #endif
   checkWiFi();

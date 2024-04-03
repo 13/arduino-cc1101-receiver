@@ -6,9 +6,12 @@
 // #define DEBUG_CRC
 #define REQUIRES_INTERNET
 // #define MQTT_SUBSCRIBE
-#define USE_CRYPTO // Decryption
+
+// Crypto
+// openssl rand -hex 16
+#define USE_CRYPTO
 #ifdef USE_CRYPTO
-#define AES_KEY {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F}
+#define AES_KEY "808639b9d210f261fefcce5a85c0cadb"
 #endif
 
 /* Sensor */
