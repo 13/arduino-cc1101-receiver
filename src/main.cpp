@@ -5,6 +5,11 @@
 #include <helpers.h>
 #include "credentials.h"
 
+#ifdef USE_CRYPTO
+#include <Crypto.h>
+#include <AES.h>
+#endif
+
 // cc1101
 const uint8_t byteArrSize = 61;
 
@@ -29,6 +34,13 @@ int wsDataSize = 0;
 uint8_t connectedClients = 0;
 
 unsigned long previousMinute = 0;
+
+#ifdef USE_CRYPTO
+byte aeskey[16] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F};
+byte cipher[61];
+byte decryptedText[61];
+AES128 aes128;
+#endif
 
 // supplementary functions
 #ifdef VERBOSE
@@ -255,6 +267,25 @@ void processCC1101Data()
       Serial.print(F("> [CC1101] Length: "));
       Serial.println(byteArrLen);
 #endif
+
+#ifdef USE_CRYPTO
+      // Decrypt the cipher
+      aes128.decryptBlock(decryptedText, byteArr);
+
+      int blockCount = byteArrLen / 16 + 1;
+      for (int i = 0; i < blockCount; ++i)
+      {
+        aes128.decryptBlock(&decryptedText[i * 16], &byteArr[i * 16]);
+      }
+
+      Serial.print("Dec: ");
+      for (int i = 0; i < sizeof(decryptedText); i++)
+      {
+        Serial.write(decryptedText[i]);
+      }
+      Serial.println();
+#endif
+
       String input_str = "";
       if (byteArrLen > 0 && byteArrLen <= byteArrSize)
       {
@@ -441,6 +472,9 @@ void setup()
   initSerial();
   printBootMsg();
   initFS();
+#ifdef USE_CRYPTO
+  aes128.setKey(aeskey, 16); // Setting Key for AES
+#endif
   checkWiFi();
   mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
   if (WiFi.status() == WL_CONNECTED)
