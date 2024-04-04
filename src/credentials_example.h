@@ -22,8 +22,8 @@
 #define DEVICE_DESCRIPTION "Garten"
 
 /* WiFi */
-#define WIFI_SSID "muhxnetwork"
-#define WIFI_PASS "Wombat2020"
+#define WIFI_SSID "network"
+#define WIFI_PASS ""
 
 /* MQTT server credentials */
 #define MQTT_USER ""
@@ -31,7 +31,7 @@
 #define MQTT_SERVER "192.168.22.5"
 #define MQTT_TOPIC "muh/sensors"
 #define MQTT_TOPIC_LWT "muh/esp"
-#define MQTT_PORT 1883
+#define MQTT_PORT 1881 // 1881
 #ifdef MQTT_SUBSCRIBE
 #define MQTT_SUBSCRIBE_TOPIC "muh/sensors/#"
 #endif
