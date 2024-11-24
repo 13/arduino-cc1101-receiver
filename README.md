@@ -1,6 +1,6 @@
-# arduino-cc1101-receiver
+# arduino-lora-receiver
 
-An Arduino CC1101 receiver for ESP8266/ESP32
+An Arduino LoRa receiver for ESP32
 
 <p align="center">
 <img src="assets/screenshot1.png" width="300">
@@ -23,7 +23,7 @@ An Arduino CC1101 receiver for ESP8266/ESP32
 
 ## About
 
-The arduino-cc1101-receiver receives a 61 characters string and adds RSSI/LQI.
+The arduino-lora-receiver receives a 61 characters string and adds RSSI/LQI.
 
 ```
 Z:60,N:87,T1:29,H1:817,T2:25,T3:42,P1:9260,A1:753,V1:38
@@ -42,10 +42,10 @@ S = switch
 
 , = delimiter
 
-X1 = si7021
-X2 = ds18b20
-X3 = bmp280
-X4 = bme680
+T1 = si7021
+T2 = ds18b20
+T3 = bmp280
+T4 = bme680
 
 RSSI = Signal strength
 LQI = Signal quality
@@ -62,15 +62,15 @@ RN = receiver node id
 
 * [VSCode](https://github.com/microsoft/vscode)
 * [PlatformIO](https://platformio.org/)
-* [SmartRC-CC1101-Driver-Lib](https://github.com/LSatan/SmartRC-CC1101-Driver-Lib/)
+* [arduino-LoRa](https://github.com/sandeepmistry/arduino-LoRa)
 
 ## Getting Started
 
 ### Prerequisites
 
-* An Arduino/ESP8266/ESP32 with a CC1101 module as a receiver
-   * Wiring diagram: [SmartRC-CC1101-Driver-Lib](https://github.com/LSatan/SmartRC-CC1101-Driver-Lib/)
-* An Arduino with a CC1101 module as a transmitter [13/arduino-cc1101-transmitter](https://github.com/13/arduino-cc1101-transmitter)
+* An Arduino/ESP32 with a LoRa module as a receiver
+   * Wiring diagram: []()
+* An Arduino with a LoRa module as a transmitter [13/arduino-lora-transmitter](https://github.com/13/arduino-lora-transmitter)
    * Wiring diagram: [AskSin++](https://asksinpp.de/Grundlagen/01_hardware.html#stromversorgung)
 * VSCode
 * PlatformIO
@@ -78,7 +78,7 @@ RN = receiver node id
 ### Installation
 
 ```sh
-git clone https://github.com/13/arduino-cc1101-receiver.git
+git clone https://github.com/13/arduino-lora-receiver.git
 ```
 
 ## Usage
