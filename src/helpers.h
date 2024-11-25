@@ -2,12 +2,7 @@
 #define HELPERS_H
 
 #include <Arduino.h>
-#if defined(ESP8266)
-#include <ESP8266WiFi.h>
-#include <WiFiClient.h>
-#include <ESP8266mDNS.h>
-#include <Updater.h>
-#endif
+#include <ArduinoJson.h>
 #if defined(ESP32)
 #include <WiFi.h>
 #include <ESPmDNS.h>
@@ -22,8 +17,9 @@
 #include <PubSubClient.h>
 #include <NTPClient.h>
 #include <WiFiUdp.h>
-#include "../../include/version.h"
-#include <wsData.h>
+#include "credentials.h"
+#include "../include/version.h"
+#include "wsData.h"
 
 #define INTERVAL_1MIN (1 * 60 * 1000L)
 

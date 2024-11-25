@@ -1,8 +1,9 @@
 #include <Arduino.h>
-#include <ELECHOUSE_CC1101_SRC_DRV.h>
+#include <SPI.h>
+#include <LoRa.h>
 #include "../include/version.h"
-#include <wsData.h>
-#include <helpers.h>
+#include "wsData.h"
+#include "helpers.h"
 #include "credentials.h"
 
 #ifdef USE_CRYPTO
@@ -10,7 +11,15 @@
 #include <AES.h>
 #endif
 
-// cc1101
+// SPI
+#define SCK 9  // Clock
+#define MISO 7 // Master In Slave Out
+#define MOSI 8 // Master Out Slave In
+#define SS 10  // Chip Select
+#define RST 11 // Reset
+#define DIO0 2 // DIO0
+
+// LoRa
 const uint8_t byteArrSize = 61;
 
 // ESP
@@ -233,310 +242,271 @@ void onMqttMessage(char *topic, byte *payload, unsigned int len)
 }
 #endif
 
-void initCC1101()
+void processLoRaData(int packetSize)
 {
-  // Start CC1101
-  Serial.print(F("> [CC1101] Initializing... "));
-  int cc_state = ELECHOUSE_cc1101.getCC1101();
+  byte byteArr[byteArrSize] = {0};
+#ifdef DEBUG
+  Serial.print(F("> [LoRa] Receive... "));
+#endif
+
+#ifdef VERBOSE
+#ifndef DEBUG
+  Serial.print(F("> [LoRa] Receive... "));
+#endif
+#endif
+#ifdef VERBOSE
+  Serial.print(F("CRC "));
+#endif
+  Serial.println("NEW: ");
+  for (int o = 0; o < packetSize; o++)
+  {
+    Serial.print((char)LoRa.read());
+  }
+  Serial.println();
+
+  int byteArrLen = packetSize;
+  int rssi = LoRa.packetRssi();
+  int lqi = LoRa.packetSnr();
+  if (byteArrLen > 0 && byteArrLen <= byteArrSize)
+  {
+#ifdef VERBOSE
+    Serial.println(F("OK"));
+#endif
+    byteArr[byteArrLen] = '\0'; // 0, \0
+  }
+  else
+  {
+#ifdef VERBOSE
+    Serial.println(F("ERR"));
+#endif
+  }
+#ifdef VERBOSE
+  Serial.print(F("> [LoRa] Length: "));
+  Serial.println(byteArrLen);
+#endif
+
+#ifdef USE_CRYPTO
+  if (!(sizeof(byteArr) >= 4 && byteArr[0] == 'Z' && byteArr[1] == ':' && isdigit(byteArr[2]) && isdigit(byteArr[3])))
+  {
+    Serial.print(F("> [CRYPTO] Decrypting: "));
+    // Decrypt the cipher
+    aes128.decryptBlock(decryptedText, byteArr);
+
+    int blockCount = byteArrLen / 16 + 1;
+    for (int i = 0; i < blockCount; ++i)
+    {
+      aes128.decryptBlock(&decryptedText[i * 16], &byteArr[i * 16]);
+    }
+
+    for (int i = 0; i < sizeof(decryptedText); i++)
+    {
+      Serial.print((char)decryptedText[i]);
+    }
+    Serial.println();
+
+    // Check if decryptedText meets the specified conditions
+    if (sizeof(decryptedText) >= 4 && decryptedText[0] == 'Z' && decryptedText[1] == ':' && isdigit(decryptedText[2]) && isdigit(decryptedText[3]))
+    {
+      Serial.println(F("> [CRYPTO] Decryption successful."));
+      // Extracting third and fourth characters and converting to integer
+      byteArrLen = (decryptedText[2] - '0') * 10 + (decryptedText[3] - '0');
+#ifdef DEBUG
+      Serial.print(F("> [CRYPTO] Length: "));
+      Serial.println(byteArrLen);
+#endif
+      crypto = true;
+    }
+  }
+#endif
+
+  String input_str = "";
+
+  if (byteArrLen > 0 && byteArrLen <= byteArrSize)
+  {
+#ifdef USE_CRYPTO
+    if (!crypto)
+    {
+#endif
+      for (uint8_t i = 0; i < byteArrLen; i++)
+      {
+        // Filter [0-9A-Za-z,:]
+        if ((byteArr[i] >= '0' && byteArr[i] <= '9') ||
+            (byteArr[i] >= 'A' && byteArr[i] <= 'Z') ||
+            (byteArr[i] >= 'a' && byteArr[i] <= 'z') ||
+            byteArr[i] == ',' || byteArr[i] == ':' || byteArr[i] == '-')
+        {
+          Serial.print((char)byteArr[i]);
+          input_str += (char)byteArr[i];
+        }
+      }
+#ifdef USE_CRYPTO
+    }
+    else
+    {
+      for (uint8_t i = 0; i < byteArrLen; i++)
+      {
+        // Filter [0-9A-Za-z,:]
+        if ((decryptedText[i] >= '0' && decryptedText[i] <= '9') ||
+            (decryptedText[i] >= 'A' && decryptedText[i] <= 'Z') ||
+            (decryptedText[i] >= 'a' && decryptedText[i] <= 'z') ||
+            decryptedText[i] == ',' || decryptedText[i] == ':' || decryptedText[i] == '-')
+        {
+          Serial.print((char)decryptedText[i]);
+          input_str += (char)decryptedText[i];
+        }
+      }
+      crypto = false;
+    }
+#endif
+
+    Serial.print(F(",RSSI:"));
+    Serial.print(rssi);
+    Serial.print(F(",LQI:"));
+    Serial.print(lqi);
+    Serial.print(F(",RN:"));
+    Serial.println(getUniqueID());
+
+    input_str += ",RSSI:";
+    input_str += String(rssi);
+    input_str += ",LQI:";
+    input_str += String(lqi);
+    input_str += ",RN:";
+    input_str += getUniqueID();
+    // Serial.println(input_str);
+
+    StaticJsonDocument<384> ccJson;
+    // Split the input string into key-value pairs using comma separator
+    uint8_t pos = 0;
+    while (pos < input_str.length())
+    {
+      int sep_pos = input_str.indexOf(',', pos);
+      if (sep_pos == -1)
+      {
+        sep_pos = input_str.length();
+      }
+      String pair = input_str.substring(pos, sep_pos);
+      int colon_pos = pair.indexOf(':');
+      if (colon_pos != -1)
+      {
+        String key = pair.substring(0, colon_pos);
+        String value_str = pair.substring(colon_pos + 1);
+        if (key.startsWith("N") || key.startsWith("RN") || key.startsWith("F") || key.startsWith("RF"))
+        {
+          ccJson[key] = value_str;
+        }
+        else if ((key.startsWith("T") || key.startsWith("H") || key.startsWith("P")) || (key.startsWith("V") && value_str.length() > 1))
+        {
+          float value = value_str.toFloat() / 10.0;
+          ccJson[key] = round(value * 10.0) / 10.0;
+        }
+        else
+        {
+          int value = value_str.toInt();
+          ccJson[key] = value;
+        }
+      }
+      pos = sep_pos + 1;
+    }
+    ccJson.remove("Z");
+    ccJson["timestamp"] = timeClient.getEpochTime();
+
+    String ccJsonStr;
+    serializeJson(ccJson, ccJsonStr);
+    Serial.print("> [JSON] ");
+    Serial.println(ccJsonStr);
+
+    if (ccJson.containsKey("N") && !ccJson["N"].isNull())
+    {
+      String topic = String(MQTT_TOPIC) + "/" + String(ccJson["N"].as<String>()) + "/json";
+      if (!mqttClient.connected())
+      {
+        Serial.println("> [MQTT] Not connected");
+        connectToMqtt();
+      }
+
+      boolean publishMqtt = true;
+      boolean published = true;
+      boolean retained = !(ccJson.containsKey("R") && !ccJson["R"].isNull());
+
+#ifdef MQTT_SUBSCRIBE
+      if (ccJson.containsKey("X") && !ccJson["X"].isNull())
+      {
+        publishMqtt = !packetExists(ccJson["N"], ccJson["X"]);
+      }
+#endif
+
+      if (publishMqtt)
+      {
+        published = mqttClient.publish(topic.c_str(), ccJsonStr.c_str(), retained);
+      }
+#ifdef MQTT_SUBSCRIBE
+      else
+      {
+        Serial.print(("> [PID] Exists N:"));
+        Serial.print(String(ccJson["N"].as<String>()));
+        Serial.print(", X:");
+        Serial.println(String(ccJson["X"].as<String>()));
+        published = false;
+      }
+#endif
+      // Check if published
+      if (published)
+      {
+        Serial.print("> [MQTT] Message published");
+        if (retained)
+        {
+          Serial.print(" retained");
+        }
+        Serial.println("");
+      }
+      else
+      {
+        Serial.println("> [MQTT] No publish message");
+      }
+    }
+
+    // websocket
+#ifdef DEBUG
+    wsDataSize = ccJson.size();
+    Serial.print("> [WS] ccJson size: ");
+    Serial.println(wsDataSize);
+#endif
+#ifdef WSPACKETS
+    if (!ccJson.isNull() && ccJson.containsKey("N"))
+    {
+      myData.addPacket(ccJsonStr);
+    }
+#else
+    if (!ccJson.isNull() && ccJson.containsKey("N"))
+    {
+      myData.addPacket(ccJsonStr);
+    }
+#endif
+    // ccJsonStr = "";
+    notifyClients();
+  } // length 0
+}
+
+void initLoRa()
+{
+  // Start LoRa
+  Serial.print(F("> [LoRa] Initializing... "));
+  SPI.begin(SCK, MISO, MOSI, SS);
+  LoRa.setSPI(SPI);
+  LoRa.setPins(SS, RST, DIO0);
+  int cc_state = LoRa.begin(LO_FREQ);
   if (cc_state)
   {
     Serial.println(F("OK"));
-    ELECHOUSE_cc1101.Init();
-    ELECHOUSE_cc1101.setCCMode(1);
-    ELECHOUSE_cc1101.setModulation(0);
-    ELECHOUSE_cc1101.setMHZ(CC_FREQ);
-    // ELECHOUSE_cc1101.setPA(CC_POWER);
-    ELECHOUSE_cc1101.setSyncMode(2);
-    ELECHOUSE_cc1101.setCrc(1);
+    // LoRa.setGain(6);
+    LoRa.onReceive(processLoRaData);
+    LoRa.receive();
   }
   else
   {
     Serial.print(F("ERR "));
     Serial.println(cc_state);
     reboot();
-  }
-}
-
-void processCC1101Data()
-{
-#ifdef GD0
-  if (ELECHOUSE_cc1101.CheckReceiveFlag())
-#else
-  if (ELECHOUSE_cc1101.CheckRxFifo(CC_DELAY))
-#endif
-  {
-    byte byteArr[byteArrSize] = {0};
-#ifdef DEBUG
-    Serial.print(F("> [CC1101] Receive... "));
-#endif
-    if (ELECHOUSE_cc1101.CheckCRC())
-    {
-#ifdef VERBOSE
-#ifndef DEBUG
-      Serial.print(F("> [CC1101] Receive... "));
-#endif
-#endif
-#ifdef VERBOSE
-      Serial.print(F("CRC "));
-#endif
-      int byteArrLen = ELECHOUSE_cc1101.ReceiveData(byteArr);
-      int rssi = ELECHOUSE_cc1101.getRssi();
-      int lqi = ELECHOUSE_cc1101.getLqi();
-      if (byteArrLen > 0 && byteArrLen <= byteArrSize)
-      {
-#ifdef VERBOSE
-        Serial.println(F("OK"));
-#endif
-        byteArr[byteArrLen] = '\0'; // 0, \0
-      }
-      else
-      {
-#ifdef VERBOSE
-        Serial.println(F("ERR"));
-#endif
-      }
-#ifdef VERBOSE
-      Serial.print(F("> [CC1101] Length: "));
-      Serial.println(byteArrLen);
-#endif
-
-#ifdef USE_CRYPTO
-      if (!(sizeof(byteArr) >= 4 && byteArr[0] == 'Z' && byteArr[1] == ':' && isdigit(byteArr[2]) && isdigit(byteArr[3])))
-      {
-        Serial.print(F("> [CRYPTO] Decrypting: "));
-        // Decrypt the cipher
-        aes128.decryptBlock(decryptedText, byteArr);
-
-        int blockCount = byteArrLen / 16 + 1;
-        for (int i = 0; i < blockCount; ++i)
-        {
-          aes128.decryptBlock(&decryptedText[i * 16], &byteArr[i * 16]);
-        }
-
-        for (int i = 0; i < sizeof(decryptedText); i++)
-        {
-          Serial.print((char)decryptedText[i]);
-        }
-        Serial.println();
-
-        // Check if decryptedText meets the specified conditions
-        if (sizeof(decryptedText) >= 4 && decryptedText[0] == 'Z' && decryptedText[1] == ':' && isdigit(decryptedText[2]) && isdigit(decryptedText[3]))
-        {
-          Serial.println(F("> [CRYPTO] Decryption successful."));
-          // Extracting third and fourth characters and converting to integer
-          byteArrLen = (decryptedText[2] - '0') * 10 + (decryptedText[3] - '0');
-#ifdef DEBUG
-          Serial.print(F("> [CRYPTO] Length: "));
-          Serial.println(byteArrLen);
-#endif
-          crypto = true;
-        }
-      }
-#endif
-
-      String input_str = "";
-
-      if (byteArrLen > 0 && byteArrLen <= byteArrSize)
-      {
-#ifdef USE_CRYPTO
-        if (!crypto)
-        {
-#endif
-          for (uint8_t i = 0; i < byteArrLen; i++)
-          {
-            // Filter [0-9A-Za-z,:]
-            if ((byteArr[i] >= '0' && byteArr[i] <= '9') ||
-                (byteArr[i] >= 'A' && byteArr[i] <= 'Z') ||
-                (byteArr[i] >= 'a' && byteArr[i] <= 'z') ||
-                byteArr[i] == ',' || byteArr[i] == ':' || byteArr[i] == '-')
-            {
-              Serial.print((char)byteArr[i]);
-              input_str += (char)byteArr[i];
-            }
-          }
-#ifdef USE_CRYPTO
-        }
-        else
-        {
-          for (uint8_t i = 0; i < byteArrLen; i++)
-          {
-            // Filter [0-9A-Za-z,:]
-            if ((decryptedText[i] >= '0' && decryptedText[i] <= '9') ||
-                (decryptedText[i] >= 'A' && decryptedText[i] <= 'Z') ||
-                (decryptedText[i] >= 'a' && decryptedText[i] <= 'z') ||
-                decryptedText[i] == ',' || decryptedText[i] == ':' || decryptedText[i] == '-')
-            {
-              Serial.print((char)decryptedText[i]);
-              input_str += (char)decryptedText[i];
-            }
-          }
-          crypto = false;
-        }
-#endif
-
-        Serial.print(F(",RSSI:"));
-        Serial.print(rssi);
-        Serial.print(F(",LQI:"));
-        Serial.print(lqi);
-        Serial.print(F(",RN:"));
-        Serial.println(getUniqueID());
-
-        input_str += ",RSSI:";
-        input_str += String(rssi);
-        input_str += ",LQI:";
-        input_str += String(lqi);
-        input_str += ",RN:";
-        input_str += getUniqueID();
-        // Serial.println(input_str);
-
-        StaticJsonDocument<384> ccJson;
-        // Split the input string into key-value pairs using comma separator
-        uint8_t pos = 0;
-        while (pos < input_str.length())
-        {
-          int sep_pos = input_str.indexOf(',', pos);
-          if (sep_pos == -1)
-          {
-            sep_pos = input_str.length();
-          }
-          String pair = input_str.substring(pos, sep_pos);
-          int colon_pos = pair.indexOf(':');
-          if (colon_pos != -1)
-          {
-            String key = pair.substring(0, colon_pos);
-            String value_str = pair.substring(colon_pos + 1);
-            if (key.startsWith("N") || key.startsWith("RN") || key.startsWith("F") || key.startsWith("RF"))
-            {
-              ccJson[key] = value_str;
-            }
-            else if ((key.startsWith("T") || key.startsWith("H") || key.startsWith("P")) || (key.startsWith("V") && value_str.length() > 1))
-            {
-              float value = value_str.toFloat() / 10.0;
-              ccJson[key] = round(value * 10.0) / 10.0;
-            }
-            else
-            {
-              int value = value_str.toInt();
-              ccJson[key] = value;
-            }
-          }
-          pos = sep_pos + 1;
-        }
-        ccJson.remove("Z");
-        ccJson["timestamp"] = timeClient.getEpochTime();
-
-        String ccJsonStr;
-        serializeJson(ccJson, ccJsonStr);
-        Serial.print("> [JSON] ");
-        Serial.println(ccJsonStr);
-
-        if (ccJson.containsKey("N") && !ccJson["N"].isNull())
-        {
-          String topic = String(MQTT_TOPIC) + "/" + String(ccJson["N"].as<String>()) + "/json";
-          if (!mqttClient.connected())
-          {
-            Serial.println("> [MQTT] Not connected");
-            connectToMqtt();
-          }
-
-          boolean publishMqtt = true;
-          boolean published = true;
-          boolean retained = !(ccJson.containsKey("R") && !ccJson["R"].isNull());
-
-#ifdef MQTT_SUBSCRIBE
-          if (ccJson.containsKey("X") && !ccJson["X"].isNull())
-          {
-            publishMqtt = !packetExists(ccJson["N"], ccJson["X"]);
-          }
-#endif
-
-          if (publishMqtt)
-          {
-            published = mqttClient.publish(topic.c_str(), ccJsonStr.c_str(), retained);
-          }
-#ifdef MQTT_SUBSCRIBE
-          else
-          {
-            Serial.print(("> [PID] Exists N:"));
-            Serial.print(String(ccJson["N"].as<String>()));
-            Serial.print(", X:");
-            Serial.println(String(ccJson["X"].as<String>()));
-            published = false;
-          }
-#endif
-          // Check if published
-          if (published)
-          {
-            Serial.print("> [MQTT] Message published");
-            if (retained)
-            {
-              Serial.print(" retained");
-            }
-            Serial.println("");
-          }
-          else
-          {
-            Serial.println("> [MQTT] No publish message");
-          }
-        }
-
-        // websocket
-#ifdef DEBUG
-        wsDataSize = ccJson.size();
-        Serial.print("> [WS] ccJson size: ");
-        Serial.println(wsDataSize);
-#endif
-#ifdef WSPACKETS
-        if (!ccJson.isNull() && ccJson.containsKey("N"))
-        {
-          myData.addPacket(ccJsonStr);
-        }
-#else
-        if (!ccJson.isNull() && ccJson.containsKey("N"))
-        {
-          myData.addPacket(ccJsonStr);
-        }
-#endif
-        // ccJsonStr = "";
-        notifyClients();
-      } // length 0
-#ifdef DEBUG_CRC
-      else
-      {
-        Serial.println(F("> [CC1101] Err: Size 0 "));
-        for (uint8_t i = 0; i < byteArrSize; i++)
-        {
-          Serial.print((char)byteArr[i]);
-        }
-        Serial.print(F(",RSSI:"));
-        Serial.print(rssi);
-        Serial.print(F(",LQI:"));
-        Serial.print(lqi);
-        Serial.print(F(",RN:"));
-        Serial.println(getUniqueID());
-      }
-#endif
-    } // check crc
-#ifdef DEBUG_CRC
-    else
-    {
-      Serial.print(F("CRC "));
-      int byteArrLen = ELECHOUSE_cc1101.ReceiveData(byteArr);
-      int rssi = ELECHOUSE_cc1101.getRssi();
-      int lqi = ELECHOUSE_cc1101.getLqi();
-      byteArr[byteArrLen] = '\0'; // 0, \0
-      Serial.println(F("ERR"));
-
-      for (uint8_t i = 0; i < byteArrSize; i++)
-      {
-        Serial.print((char)byteArr[i]);
-      }
-      Serial.print(F(",RSSI:"));
-      Serial.print(rssi);
-      Serial.print(F(",LQI:"));
-      Serial.println(lqi);
-    }
-#endif
   }
 }
 
@@ -562,8 +532,8 @@ void setup()
     timeClient.update();
     myData.boottime = timeClient.getEpochTime();
   }
-  // Init CC1101
-  initCC1101();
+  // Init LoRa
+  initLoRa();
   // Initalize websocket
   initWebSocket();
 }
@@ -575,7 +545,4 @@ void loop()
 #ifdef MARK
   printMARK();
 #endif
-
-  // CC1101
-  processCC1101Data();
 }

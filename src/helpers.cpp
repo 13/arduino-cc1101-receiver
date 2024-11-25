@@ -170,7 +170,7 @@ void connectToWiFi()
 {
   WiFi.disconnect();
   WiFi.mode(WIFI_STA); // switch off AP
-  WiFi.setAutoConnect(true);
+  //WiFi.setAutoConnect(true);
   WiFi.setAutoReconnect(true);
   WiFi.hostname(hostname);
   WiFi.begin(WIFI_SSID, WIFI_PASS);
