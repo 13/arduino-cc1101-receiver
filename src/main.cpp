@@ -244,43 +244,27 @@ void onMqttMessage(char *topic, byte *payload, unsigned int len)
 
 void processLoRaData(int packetSize)
 {
-  byte byteArr[byteArrSize] = {0};
-#ifdef DEBUG
-  Serial.print(F("> [LoRa] Receive... "));
-#endif
+  // received a packet
+  Serial.println(F("> [LoRa] Receive... "));
 
-#ifdef VERBOSE
-#ifndef DEBUG
-  Serial.print(F("> [LoRa] Receive... "));
-#endif
-#endif
-#ifdef VERBOSE
-  Serial.print(F("CRC "));
-#endif
-  Serial.println("NEW: ");
-  for (int o = 0; o < packetSize; o++)
-  {
-    Serial.print((char)LoRa.read());
-  }
-  Serial.println();
+  byte byteArr[byteArrSize] = {0};
 
   int byteArrLen = packetSize;
   int rssi = LoRa.packetRssi();
-  int lqi = LoRa.packetSnr();
-  if (byteArrLen > 0 && byteArrLen <= byteArrSize)
+  float snr = LoRa.packetSnr();
+  // int lqi = round(LoRa.packetSnr());
+  // int lqi = round(snr);
+
+  // read packet
+  for (int i = 0; i < byteArrLen; i++)
   {
-#ifdef VERBOSE
-    Serial.println(F("OK"));
-#endif
-    byteArr[byteArrLen] = '\0'; // 0, \0
+    byteArr[i] = LoRa.read();
+    // Serial.print((char)LoRa.read());
   }
-  else
-  {
-#ifdef VERBOSE
-    Serial.println(F("ERR"));
-#endif
-  }
-#ifdef VERBOSE
+
+  byteArr[byteArrLen] = '\0'; // 0, \0
+
+#ifdef DEBUG
   Serial.print(F("> [LoRa] Length: "));
   Serial.println(byteArrLen);
 #endif
@@ -361,15 +345,15 @@ void processLoRaData(int packetSize)
 
     Serial.print(F(",RSSI:"));
     Serial.print(rssi);
-    Serial.print(F(",LQI:"));
-    Serial.print(lqi);
+    Serial.print(F(",SNR:"));
+    Serial.print(snr);
     Serial.print(F(",RN:"));
     Serial.println(getUniqueID());
 
     input_str += ",RSSI:";
     input_str += String(rssi);
-    input_str += ",LQI:";
-    input_str += String(lqi);
+    // input_str += ",SNR:";
+    // input_str += String(snr);
     input_str += ",RN:";
     input_str += getUniqueID();
     // Serial.println(input_str);
@@ -428,27 +412,10 @@ void processLoRaData(int packetSize)
       boolean published = true;
       boolean retained = !(ccJson.containsKey("R") && !ccJson["R"].isNull());
 
-#ifdef MQTT_SUBSCRIBE
-      if (ccJson.containsKey("X") && !ccJson["X"].isNull())
-      {
-        publishMqtt = !packetExists(ccJson["N"], ccJson["X"]);
-      }
-#endif
-
       if (publishMqtt)
       {
         published = mqttClient.publish(topic.c_str(), ccJsonStr.c_str(), retained);
       }
-#ifdef MQTT_SUBSCRIBE
-      else
-      {
-        Serial.print(("> [PID] Exists N:"));
-        Serial.print(String(ccJson["N"].as<String>()));
-        Serial.print(", X:");
-        Serial.println(String(ccJson["X"].as<String>()));
-        published = false;
-      }
-#endif
       // Check if published
       if (published)
       {
@@ -471,17 +438,10 @@ void processLoRaData(int packetSize)
     Serial.print("> [WS] ccJson size: ");
     Serial.println(wsDataSize);
 #endif
-#ifdef WSPACKETS
     if (!ccJson.isNull() && ccJson.containsKey("N"))
     {
       myData.addPacket(ccJsonStr);
     }
-#else
-    if (!ccJson.isNull() && ccJson.containsKey("N"))
-    {
-      myData.addPacket(ccJsonStr);
-    }
-#endif
     // ccJsonStr = "";
     notifyClients();
   } // length 0
@@ -494,18 +454,18 @@ void initLoRa()
   SPI.begin(SCK, MISO, MOSI, SS);
   LoRa.setSPI(SPI);
   LoRa.setPins(SS, RST, DIO0);
-  int cc_state = LoRa.begin(LO_FREQ);
-  if (cc_state)
+  int lo_state = LoRa.begin(LO_FREQ);
+  if (lo_state)
   {
-    Serial.println(F("OK"));
     // LoRa.setGain(6);
     LoRa.onReceive(processLoRaData);
     LoRa.receive();
+    Serial.println(F("OK"));
   }
   else
   {
     Serial.print(F("ERR "));
-    Serial.println(cc_state);
+    Serial.println(lo_state);
     reboot();
   }
 }
@@ -540,8 +500,8 @@ void setup()
 
 void loop()
 {
-  ws.cleanupClients();
-  checkMqtt();
+  // ws.cleanupClients();
+  // checkMqtt();
 #ifdef MARK
   printMARK();
 #endif
