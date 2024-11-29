@@ -106,7 +106,10 @@ void printBootMsg()
   Serial.print(F("> Booting... Compiled: "));
   Serial.println(VERSION);
 #if defined(ESP8266) || defined(ESP32)
-  Serial.print(F("> Node ID: "));
+  if (getUniqueID() == "0000"){
+    connectToWiFi();
+  }
+  Serial.print(F("> NodeID: "));
   Serial.println(getUniqueID());
   hostname += getUniqueID();
 #endif
