@@ -12,15 +12,26 @@
 #endif
 
 // SPI
-#define SCK 9  // Clock
+#if defined(CONFIG_IDF_TARGET_ESP32S3)
 #define MISO 7 // Master In Slave Out
 #define MOSI 8 // Master Out Slave In
+#define SCK 9  // Clock
 #define SS 10  // Chip Select
 #define RST 11 // Reset
 #define DIO0 2 // DIO0
+#else
+#define MISO 6 // Master In Slave Out
+#define MOSI 7 // Master Out Slave In
+#define SCK 8  // Clock
+#define SS 9   // Chip Select
+#define RST 10 // Reset
+#define DIO0 2 // DIO0
+#endif
 
 // LoRa
 const uint8_t byteArrSize = 61;
+const byte senderAddress = 0x14;
+const byte receiverAddress = 0x15;
 
 // ESP
 #if defined(ESP8266)
@@ -83,7 +94,7 @@ void hexStringToByteArray(const char *hexString, byte *byteArray, size_t byteArr
 // supplementary functions
 #ifdef VERBOSE
 // one minute mark
-#define MARK
+// #define MARK
 unsigned long lastMillisMark = 0L;
 uint32_t countMsg = 0;
 #endif
@@ -106,7 +117,8 @@ void printBootMsg()
   Serial.print(F("> Booting... Compiled: "));
   Serial.println(VERSION);
 #if defined(ESP8266) || defined(ESP32)
-  if (getUniqueID() == "0000"){
+  if (getUniqueID() == "0000")
+  {
     connectToWiFi();
   }
   Serial.print(F("> NodeID: "));
@@ -130,140 +142,57 @@ void printBootMsg()
 #endif
 }
 
-#ifdef MQTT_SUBSCRIBE
-// Define constants for maximum values
-const int MAX_PACKET_NODES = 32; // Adjust as needed
-const int MAX_N_LENGTH = 8;
-
-// Define struct to hold N and X pairs
-struct Packet
-{
-  char N[MAX_N_LENGTH + 1]; // +1 for null terminator
-  int X;
-};
-
-// Array to store pairs
-Packet packets[MAX_PACKET_NODES];
-int packetCount = 0;
-
-bool packetExists(const char *N)
-{
-  for (int i = 0; i < packetCount; ++i)
-  {
-    if (strcmp(packets[i].N, N) == 0)
-    {
-      // Packet with N and X values exists
-      return true;
-    }
-  }
-  // Packet with N and X values does not exist
-  return false;
-}
-
-bool packetExists(const char *N, int X)
-{
-  for (int i = 0; i < packetCount; ++i)
-  {
-    if (strcmp(packets[i].N, N) == 0 && packets[i].X == X)
-    {
-      // Packet with N and X values exists
-      return true;
-    }
-  }
-  // Packet with N and X values does not exist
-  return false;
-}
-
-void printPackets()
-{
-  Serial.println("[Packets] ");
-  for (int i = 0; i < packetCount; ++i)
-  {
-    Serial.print("N: ");
-    Serial.print(packets[i].N);
-    Serial.print(", X: ");
-    Serial.println(packets[i].X);
-  }
-}
-
-void onMqttMessage(char *topic, byte *payload, unsigned int len)
-{
-  // Parse the JSON data
-  StaticJsonDocument<200> doc;
-  deserializeJson(doc, payload, len);
-#ifdef DEBUG
-  serializeJsonPretty(doc, Serial);
-  Serial.println();
-#endif
-
-  if (doc.containsKey("N") && doc.containsKey("X") && packetCount < MAX_PACKETS)
-  {
-    String N = doc["N"];
-    int X = doc["X"];
-
-    // Check if packet with N and X values already exists
-    if (packetExists(N.c_str()))
-    {
-      // Packet already exists, update X value
-      for (int i = 0; i < packetCount; ++i)
-      {
-        if (strcmp(packets[i].N, N.c_str()) == 0)
-        {
-#ifdef DEBUG
-          Serial.print(("> [PID] Update N:"));
-          Serial.print(N.c_str());
-          Serial.print(",X:");
-          Serial.println(X);
-#endif
-          packets[i].X = X;
-          break;
-        }
-      }
-    }
-    else
-    {
-      // Packet does not exist, add it to the array
-      if (packetCount < MAX_PACKETS)
-      {
-#ifdef DEBUG
-        Serial.print(("> [PID] Add N:"));
-        Serial.print(N.c_str());
-        Serial.print(",X:");
-        Serial.println(X);
-#endif
-        // Add the packet to the array
-        strncpy(packets[packetCount].N, N.c_str(), MAX_N_LENGTH);
-        packets[packetCount].N[MAX_N_LENGTH] = '\0'; // Ensure null termination
-        packets[packetCount].X = X;
-        packetCount++;
-      }
-    }
-  }
-#ifdef DEBUG
-  printPackets();
-#endif
-}
-#endif
-
 void processLoRaData(int packetSize)
 {
+  if (packetSize == 0)
+  {
+    Serial.println(F("> [LoRa] ERR: 0"));
+    return; // if there's no packet, return
+  }
   // received a packet
   Serial.println(F("> [LoRa] Receive... "));
+
+  // read packet header bytes:
+  int recipient = LoRa.read();       // recipient address
+  byte sender = LoRa.read();         // sender address
+  byte incomingLength = LoRa.read(); // incoming msg length
+
+  String incoming = "";
+  while (LoRa.available())
+  {                                // can't use readString() in callback, so
+    incoming += (char)LoRa.read(); // add bytes one by one
+  }
+
+  if (incomingLength != incoming.length())
+  { // check length for error
+    Serial.print(F("> [LoRa] ERR: length byte = "));
+    Serial.print(incomingLength);
+    Serial.print(F(" != "));
+    Serial.println(incoming.length());
+    return; // skip rest of function
+  }
+
+  // if the recipient isn't this device or broadcast,
+  if (recipient != receiverAddress && recipient != 0xFF)
+  {
+    Serial.println(F("> [LoRa] ERR: receiver"));
+    return; // skip rest of function
+  }
+
+  Serial.println("Message: " + incoming);
 
   byte byteArr[byteArrSize] = {0};
 
   int byteArrLen = packetSize;
   int rssi = LoRa.packetRssi();
-  float snr = LoRa.packetSnr();
-  // int lqi = round(LoRa.packetSnr());
-  // int lqi = round(snr);
+  float snr = round(LoRa.packetSnr());
 
   // read packet
-  for (int i = 0; i < byteArrLen; i++)
+  /*for (int i = 0; i < byteArrLen && LoRa.available(); i++)
   {
     byteArr[i] = LoRa.read();
     // Serial.print((char)LoRa.read());
-  }
+  }*/
 
   byteArr[byteArrLen] = '\0'; // 0, \0
 
@@ -355,15 +284,17 @@ void processLoRaData(int packetSize)
 
     input_str += ",RSSI:";
     input_str += String(rssi);
-    // input_str += ",SNR:";
-    // input_str += String(snr);
+    input_str += ",SNR:";
+    input_str += String(snr);
     input_str += ",RN:";
     input_str += getUniqueID();
     // Serial.println(input_str);
 
-    StaticJsonDocument<384> ccJson;
-    // Split the input string into key-value pairs using comma separator
+    StaticJsonDocument<384> ccJson; // 384
+    // JsonDocument ccJson;
+    //  Split the input string into key-value pairs using comma separator
     uint8_t pos = 0;
+
     while (pos < input_str.length())
     {
       int sep_pos = input_str.indexOf(',', pos);
@@ -377,23 +308,32 @@ void processLoRaData(int packetSize)
       {
         String key = pair.substring(0, colon_pos);
         String value_str = pair.substring(colon_pos + 1);
+
+#ifdef DEBUG
+        Serial.print("[");
+        Serial.print(key);
+        Serial.print("]:");
+        Serial.println(value_str);
+#endif
+
         if (key.startsWith("N") || key.startsWith("RN") || key.startsWith("F") || key.startsWith("RF"))
         {
           ccJson[key] = value_str;
         }
         else if ((key.startsWith("T") || key.startsWith("H") || key.startsWith("P")) || (key.startsWith("V") && value_str.length() > 1))
         {
-          float value = value_str.toFloat() / 10.0;
-          ccJson[key] = round(value * 10.0) / 10.0;
+          float valueFloat = value_str.toFloat() / 10.0;
+          ccJson[key] = round(valueFloat * 10.0) / 10.0;
         }
         else
         {
-          int value = value_str.toInt();
-          ccJson[key] = value;
+          int valueInt = value_str.toInt();
+          ccJson[key] = valueInt;
         }
       }
       pos = sep_pos + 1;
     }
+
     ccJson.remove("Z");
     ccJson["timestamp"] = timeClient.getEpochTime();
 
@@ -401,52 +341,54 @@ void processLoRaData(int packetSize)
     serializeJson(ccJson, ccJsonStr);
     Serial.print("> [JSON] ");
     Serial.println(ccJsonStr);
-
-    if (ccJson.containsKey("N") && !ccJson["N"].isNull())
-    {
-      String topic = String(MQTT_TOPIC) + "/" + String(ccJson["N"].as<String>()) + "/json";
-      if (!mqttClient.connected())
-      {
-        Serial.println("> [MQTT] Not connected");
-        connectToMqtt();
-      }
-
-      boolean publishMqtt = true;
-      boolean published = true;
-      boolean retained = !(ccJson.containsKey("R") && !ccJson["R"].isNull());
-
-      if (publishMqtt)
-      {
-        published = mqttClient.publish(topic.c_str(), ccJsonStr.c_str(), retained);
-      }
-      // Check if published
-      if (published)
-      {
-        Serial.print("> [MQTT] Message published");
-        if (retained)
+    /*
+        if (ccJson.containsKey("N") && !ccJson["N"].isNull())
         {
-          Serial.print(" retained");
-        }
-        Serial.println("");
-      }
-      else
-      {
-        Serial.println("> [MQTT] No publish message");
-      }
-    }
+          String topic = String(MQTT_TOPIC) + "/" + String(ccJson["N"].as<String>()) + "/json";
+          if (!mqttClient.connected())
+          {
+            Serial.println("> [MQTT] Not connected");
+            connectToMqtt();
+          }
 
-    // websocket
-#ifdef DEBUG
-    wsDataSize = ccJson.size();
-    Serial.print("> [WS] ccJson size: ");
-    Serial.println(wsDataSize);
-#endif
-    if (!ccJson.isNull() && ccJson.containsKey("N"))
-    {
-      myData.addPacket(ccJsonStr);
-    }
-    // ccJsonStr = "";
-    notifyClients();
+          boolean publishMqtt = true;
+          boolean published = true;
+          boolean retained = !(ccJson.containsKey("R") && !ccJson["R"].isNull());
+
+          if (publishMqtt)
+          {
+            // Serial.println(ccJsonStr.c_str());
+            // BUG
+            published = mqttClient.publish(topic.c_str(), ccJsonStr.c_str(), retained);
+          }
+          // Check if published
+          if (published)
+          {
+            Serial.print("> [MQTT] Message published");
+            if (retained)
+            {
+              Serial.print(" retained");
+            }
+            Serial.println("");
+          }
+          else
+          {
+            Serial.println("> [MQTT] No publish message");
+          }
+        }
+
+        // websocket
+    #ifdef DEBUG
+        wsDataSize = ccJson.size();
+        Serial.print("> [WS] ccJson size: ");
+        Serial.println(wsDataSize);
+    #endif
+        if (!ccJson.isNull() && ccJson.containsKey("N"))
+        {
+          myData.addPacket(ccJsonStr);
+        }
+        ccJsonStr = "";
+        notifyClients();*/
   } // length 0
 }
 
@@ -457,10 +399,16 @@ void initLoRa()
   SPI.begin(SCK, MISO, MOSI, SS);
   LoRa.setSPI(SPI);
   LoRa.setPins(SS, RST, DIO0);
+
   int lo_state = LoRa.begin(LO_FREQ);
   if (lo_state)
   {
     // LoRa.setGain(6);
+    // LoRa.setPreambleLength(8);
+    // LoRa.setCodingRate4(5);
+    LoRa.setSpreadingFactor(10);
+    LoRa.setSyncWord(0x13);
+    LoRa.enableCrc();
     LoRa.onReceive(processLoRaData);
     LoRa.receive();
     Serial.println(F("OK"));
@@ -488,9 +436,6 @@ void setup()
   {
     initMDNS();
     connectToMqtt();
-#ifdef MQTT_SUBSCRIBE
-    mqttClient.setCallback(onMqttMessage);
-#endif
     timeClient.begin();
     timeClient.update();
     myData.boottime = timeClient.getEpochTime();
