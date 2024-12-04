@@ -146,40 +146,11 @@ void processLoRaData(int packetSize)
 {
   if (packetSize == 0)
   {
-    Serial.println(F("> [LoRa] ERR: 0"));
+    Serial.println(F("> [LoRa] ERR: empty packet"));
     return; // if there's no packet, return
   }
   // received a packet
   Serial.println(F("> [LoRa] Receive... "));
-
-  // read packet header bytes:
-  int recipient = LoRa.read();       // recipient address
-  byte sender = LoRa.read();         // sender address
-  byte incomingLength = LoRa.read(); // incoming msg length
-
-  String incoming = "";
-  while (LoRa.available())
-  {                                // can't use readString() in callback, so
-    incoming += (char)LoRa.read(); // add bytes one by one
-  }
-
-  if (incomingLength != incoming.length())
-  { // check length for error
-    Serial.print(F("> [LoRa] ERR: length byte = "));
-    Serial.print(incomingLength);
-    Serial.print(F(" != "));
-    Serial.println(incoming.length());
-    return; // skip rest of function
-  }
-
-  // if the recipient isn't this device or broadcast,
-  if (recipient != receiverAddress && recipient != 0xFF)
-  {
-    Serial.println(F("> [LoRa] ERR: receiver"));
-    return; // skip rest of function
-  }
-
-  Serial.println("Message: " + incoming);
 
   byte byteArr[byteArrSize] = {0};
 
@@ -188,11 +159,12 @@ void processLoRaData(int packetSize)
   float snr = round(LoRa.packetSnr());
 
   // read packet
-  /*for (int i = 0; i < byteArrLen && LoRa.available(); i++)
+  //for (int i = 0; i < byteArrLen && LoRa.available(); i++)
+  while (LoRa.available())
   {
     byteArr[i] = LoRa.read();
     // Serial.print((char)LoRa.read());
-  }*/
+  }
 
   byteArr[byteArrLen] = '\0'; // 0, \0
 
@@ -234,10 +206,15 @@ void processLoRaData(int packetSize)
     }
   }
 #endif
+  if (!(sizeof(byteArr) >= 4 && byteArr[0] == 'Z' && byteArr[1] == ':' && isdigit(byteArr[2]) && isdigit(byteArr[3]))){
+    Serial.print(F("> [LoRa] ERR: packet format"));
+    return;
+  }
 
   String input_str = "";
+  int input_size = byteArr[2] * 10 + byteArr[3];
 
-  if (byteArrLen > 0 && byteArrLen <= byteArrSize)
+  if (byteArrLen > 0 && byteArrLen <= byteArrSize && byteArrLen == input_size)
   {
 #ifdef USE_CRYPTO
     if (!crypto)
@@ -341,7 +318,7 @@ void processLoRaData(int packetSize)
     serializeJson(ccJson, ccJsonStr);
     Serial.print("> [JSON] ");
     Serial.println(ccJsonStr);
-    /*
+    
         if (ccJson.containsKey("N") && !ccJson["N"].isNull())
         {
           String topic = String(MQTT_TOPIC) + "/" + String(ccJson["N"].as<String>()) + "/json";
@@ -388,7 +365,7 @@ void processLoRaData(int packetSize)
           myData.addPacket(ccJsonStr);
         }
         ccJsonStr = "";
-        notifyClients();*/
+        notifyClients();
   } // length 0
 }
 
