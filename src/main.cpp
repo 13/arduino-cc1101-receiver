@@ -450,7 +450,7 @@ void setup()
     connectToMqtt();
     timeClient.begin();
     timeClient.update();
-    myData.boottime = timeClient.getEpochTime();
+    myData.boottime = Rome.toLocal(timeClient.getEpochTime());
   }
   // Init LoRa
   initLoRa();
