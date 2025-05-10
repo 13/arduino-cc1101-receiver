@@ -564,7 +564,8 @@ void setup()
 #endif
     timeClient.begin();
     timeClient.update();
-    myData.boottime = Rome.toLocal(timeClient.getEpochTime());
+    // myData.boottime = Rome.toLocal(timeClient.getEpochTime());
+    myData.boottime = timeClient.getEpochTime();
   }
   // Init CC1101
   initCC1101();

@@ -179,13 +179,13 @@
           parsedData.timestamp !== null &&
           parsedData.timestamp !== ""
         ) {
-          const timestamp = new Date((parsedData.timestamp - 3600) * 1000);
+          const timestamp = new Date((parsedData.timestamp) * 1000);
           timestampElement.innerHTML =
-            timestamp.getHours().toString().padStart(2, "0") +
+            timestamp.getUTCHours().toString().padStart(2, "0") +
             ":" +
-            timestamp.getMinutes().toString().padStart(2, "0") +
+            timestamp.getUTCMinutes().toString().padStart(2, "0") +
             ":" +
-            timestamp.getSeconds().toString().padStart(2, "0");
+            timestamp.getUTCSeconds().toString().padStart(2, "0");
         }
         if (parsedData.version) {
           // Check if the version has changed
@@ -209,34 +209,51 @@
         }
 
         // Uptime
-        if (
-          parsedData.boottime &&
-          parsedData.boottime !== null &&
-          parsedData.boottime !== ""
-        ) {
-          if (parsedData.boottime > 1577836800){
-          var currentUnixTime = Math.floor(Date.now() / 1000 + 3600);
-          var uptimeInSeconds = currentUnixTime - parsedData.boottime;
-          var days = Math.floor(uptimeInSeconds / (24 * 60 * 60));
-          var hours = Math.floor(
-            (uptimeInSeconds % (24 * 60 * 60)) / (60 * 60)
-          );
-          var minutes = Math.floor((uptimeInSeconds % (60 * 60)) / 60);
-          var seconds = uptimeInSeconds % 60;
-          var formattedUptime =
-            days +
-            "T" +
-            hours.toString().padStart(2, "0") +
-            ":" +
-            minutes.toString().padStart(2, "0") +
-            ":" +
-            seconds.toString().padStart(2, "0");
-          } else {
-            var formattedUptime = "0T00:00:01";
-          }
+// Uptime
+if (
+  parsedData.boottime &&
+  parsedData.boottime !== null &&
+  parsedData.boottime !== ""
+) {
+  const MIN_VALID_BOOT = 1577836800; // Jan 1 2020
+  const MAX_UPTIME_SEC = 365 * 24 * 60 * 60; // 1 year, for sanity
+  const nowSec = Math.floor(Date.now() / 1000);
 
-          uptimeElement.innerHTML = formattedUptime;
-        }
+  let uptimeInSeconds = nowSec - parsedData.boottime;
+
+  // 1) Boot time too old or invalid
+  if (parsedData.boottime < MIN_VALID_BOOT) {
+    console.warn("Boottime before 2020 — using default uptime");
+    uptimeInSeconds = 1;
+  }
+  // 2) Boot time in the future
+  else if (uptimeInSeconds < 1) {
+    console.warn("Boottime is in the future — using minimum uptime");
+    uptimeInSeconds = 1;
+  }
+  // 3) Uptime unreasonably large
+  else if (uptimeInSeconds > MAX_UPTIME_SEC) {
+    console.warn("Uptime > 1 year — capping to 1 year");
+    uptimeInSeconds = MAX_UPTIME_SEC;
+  }
+
+  const days = Math.floor(uptimeInSeconds / 86_400);
+  const hours = Math.floor((uptimeInSeconds % 86_400) / 3_600);
+  const minutes = Math.floor((uptimeInSeconds % 3_600) / 60);
+  const seconds = uptimeInSeconds % 60;
+
+  const formattedUptime =
+    days +
+    "T" +
+    hours.toString().padStart(2, "0") +
+    ":" +
+    minutes.toString().padStart(2, "0") +
+    ":" +
+    seconds.toString().padStart(2, "0");
+
+  uptimeElement.innerHTML = formattedUptime;
+}
+
 
         if (parsedData.rssi) {
           const rssi = parsedData.rssi;
@@ -299,13 +316,13 @@
               const packetData = JSON.parse(element);
               delete packetData.RN;
 
-              const packetTs = new Date((packetData.timestamp - 3600) * 1000);
+              const packetTs = new Date((packetData.timestamp) * 1000);
               const formattedPacketTs =
-                packetTs.getHours().toString().padStart(2, "0") +
+                packetTs.getUTCHours().toString().padStart(2, "0") +
                 ":" +
-                packetTs.getMinutes().toString().padStart(2, "0") +
+                packetTs.getUTCMinutes().toString().padStart(2, "0") +
                 ":" +
-                packetTs.getSeconds().toString().padStart(2, "0");
+                packetTs.getUTCSeconds().toString().padStart(2, "0");
 
               delete packetData.timestamp;
               const tsPair = { D: formattedPacketTs };
