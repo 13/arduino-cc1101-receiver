@@ -27,7 +27,11 @@ wsData myData;
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 WiFiUDP ntpUDP;
-NTPClient timeClient(ntpUDP, "pool.ntp.org", 3600);
+NTPClient timeClient(ntpUDP, NTP_SERVER, 0);
+// DST and Standard time rules for Europe/Rome
+TimeChangeRule CEST = {"CEST", Last, Sun, Mar, 2, 120}; // UTC + 2
+TimeChangeRule CET  = {"CET",  Last, Sun, Oct, 3, 60};  // UTC + 1
+Timezone Rome(CEST, CET);
 
 long mqttLastReconnectAttempt = 0;
 int wsDataSize = 0;
@@ -423,7 +427,7 @@ void processCC1101Data()
           pos = sep_pos + 1;
         }
         ccJson.remove("Z");
-        ccJson["timestamp"] = timeClient.getEpochTime();
+        ccJson["timestamp"] = Rome.toLocal(timeClient.getEpochTime());
 
         String ccJsonStr;
         serializeJson(ccJson, ccJsonStr);
@@ -560,7 +564,7 @@ void setup()
 #endif
     timeClient.begin();
     timeClient.update();
-    myData.boottime = timeClient.getEpochTime();
+    myData.boottime = Rome.toLocal(timeClient.getEpochTime());
   }
   // Init CC1101
   initCC1101();

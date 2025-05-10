@@ -22,6 +22,7 @@
 #include <PubSubClient.h>
 #include <NTPClient.h>
 #include <WiFiUdp.h>
+#include <Timezone.h>
 #include "../../include/version.h"
 #include <wsData.h>
 
@@ -31,6 +32,9 @@ extern WiFiClient wifiClient;
 extern PubSubClient mqttClient;
 extern WiFiUDP ntpUDP;
 extern NTPClient timeClient;
+extern TimeChangeRule CEST;
+extern TimeChangeRule CET;
+extern Timezone Rome;
 
 extern String hostname;
 extern uint32_t countMsg;

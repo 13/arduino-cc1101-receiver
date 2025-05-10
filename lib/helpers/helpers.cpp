@@ -83,7 +83,7 @@ void getState()
     myData.memfree = ESP.getFreeHeap();
     myData.uptime = countMsg;
     myData.version = VERSION;
-    myData.timestamp = timeClient.getEpochTime();
+    myData.timestamp = Rome.toLocal(timeClient.getEpochTime());
   }
 }
 
@@ -315,7 +315,7 @@ String wsSerializeJson()
   uint8_t fragmentationPercentage = static_cast<uint8_t>((100 * (myData.memfree - ESP.getMaxAllocHeap())) / myData.memfree);
   myData.memfrag = fragmentationPercentage;
 #endif
-  myData.timestamp = timeClient.getEpochTime();
+  myData.timestamp = Rome.toLocal(timeClient.getEpochTime());
   String jsonStr = myData.toJson();
   Serial.print("> [WS] ");
   Serial.println(jsonStr);
