@@ -40,7 +40,7 @@ struct wsData
     String toJson()
     {
         // Create a JSON document
-        DynamicJsonDocument doc(3072);
+        JsonDocument doc;
 
         // Add fields to the document
         doc["uptime"] = uptime;
@@ -59,7 +59,7 @@ struct wsData
         doc["timestamp"] = timestamp;
 
         // Add the packets array to the document
-        JsonArray packetsArray = doc.createNestedArray("packets");
+        JsonArray packetsArray = doc["packets"].to<JsonArray>();
         for (int i = 0; i < MAX_PACKETS; ++i)
         {
             packetsArray.add(packets[i]);
@@ -67,6 +67,7 @@ struct wsData
 
         // Serialize the document to a JSON string
         String jsonString;
+        doc.shrinkToFit();  // optional
         serializeJson(doc, jsonString);
         // doc.~BasicJsonDocument(); // destroy
 

@@ -30,9 +30,6 @@
 
 // LoRa
 const uint8_t byteArrSize = 61;
-const byte senderAddress = 0x14;
-const byte receiverAddress = 0x15;
-
 // ESP
 #if defined(ESP8266)
 String hostname = "esp8266-";
@@ -94,7 +91,7 @@ void hexStringToByteArray(const char *hexString, byte *byteArray, size_t byteArr
 // supplementary functions
 #ifdef VERBOSE
 // one minute mark
-// #define MARK
+#define MARK
 unsigned long lastMillisMark = 0L;
 uint32_t countMsg = 0;
 #endif
@@ -159,11 +156,13 @@ void processLoRaData(int packetSize)
   float snr = round(LoRa.packetSnr());
 
   // read packet
-  //for (int i = 0; i < byteArrLen && LoRa.available(); i++)
+  // for (int i = 0; i < byteArrLen && LoRa.available(); i++)
+  int l = 0;
   while (LoRa.available())
   {
-    byteArr[i] = LoRa.read();
+    byteArr[l] = LoRa.read();
     // Serial.print((char)LoRa.read());
+    l++;
   }
 
   byteArr[byteArrLen] = '\0'; // 0, \0
@@ -206,13 +205,36 @@ void processLoRaData(int packetSize)
     }
   }
 #endif
-  if (!(sizeof(byteArr) >= 4 && byteArr[0] == 'Z' && byteArr[1] == ':' && isdigit(byteArr[2]) && isdigit(byteArr[3]))){
-    Serial.print(F("> [LoRa] ERR: packet format"));
+  if (!(sizeof(byteArr) >= 4 && byteArr[0] == 'Z' && byteArr[1] == ':' && isdigit(byteArr[2]) && isdigit(byteArr[3])))
+  {
+    Serial.println(F("> [LoRa] ERR: packet format"));
     return;
   }
+  else
+  {
+    Serial.println(F("> [LoRa] Valid format"));
+  }
+
+#ifdef DEBUGX
+  Serial.println(F("> [LoRa] DBG: "));
+  for (uint8_t i = 0; i < byteArrLen; i++)
+  {
+    /*Serial.print(i);
+    Serial.print(" ");
+    Serial.print(byteArr[i]);
+    Serial.print(" ");*/
+    Serial.println((char)byteArr[i]);
+  }
+  Serial.println();
+#endif
 
   String input_str = "";
-  int input_size = byteArr[2] * 10 + byteArr[3];
+  int input_size = (byteArr[2] - 48) * 10 + (byteArr[3] - 48);
+
+#ifdef DEBUG
+  Serial.print(F("> [LoRa] Length byte: "));
+  Serial.println(input_size);
+#endif
 
   if (byteArrLen > 0 && byteArrLen <= byteArrSize && byteArrLen == input_size)
   {
@@ -228,7 +250,7 @@ void processLoRaData(int packetSize)
             (byteArr[i] >= 'a' && byteArr[i] <= 'z') ||
             byteArr[i] == ',' || byteArr[i] == ':' || byteArr[i] == '-')
         {
-          Serial.print((char)byteArr[i]);
+          // Serial.print((char)byteArr[i]);
           input_str += (char)byteArr[i];
         }
       }
@@ -252,12 +274,12 @@ void processLoRaData(int packetSize)
     }
 #endif
 
-    Serial.print(F(",RSSI:"));
+    /*Serial.print(F(",RSSI:"));
     Serial.print(rssi);
     Serial.print(F(",SNR:"));
     Serial.print(snr);
     Serial.print(F(",RN:"));
-    Serial.println(getUniqueID());
+    Serial.println(getUniqueID());*/
 
     input_str += ",RSSI:";
     input_str += String(rssi);
@@ -265,10 +287,17 @@ void processLoRaData(int packetSize)
     input_str += String(snr);
     input_str += ",RN:";
     input_str += getUniqueID();
-    // Serial.println(input_str);
+    if (input_str.length() < 4)
+    {
+      Serial.println(F("> [LoRa] ERR: string empty"));
+      return; // if there's no packet, return
+    }
+#ifdef DEBUG
+    Serial.print("> input_str: ");
+    Serial.println(input_str);
+#endif
 
-    StaticJsonDocument<384> ccJson; // 384
-    // JsonDocument ccJson;
+    JsonDocument ccJson; // 384
     //  Split the input string into key-value pairs using comma separator
     uint8_t pos = 0;
 
@@ -289,7 +318,7 @@ void processLoRaData(int packetSize)
 #ifdef DEBUG
         Serial.print("[");
         Serial.print(key);
-        Serial.print("]:");
+        Serial.print("]");
         Serial.println(value_str);
 #endif
 
@@ -315,57 +344,63 @@ void processLoRaData(int packetSize)
     ccJson["timestamp"] = timeClient.getEpochTime();
 
     String ccJsonStr;
+    ccJson.shrinkToFit(); // optional
+
     serializeJson(ccJson, ccJsonStr);
+
     Serial.print("> [JSON] ");
     Serial.println(ccJsonStr);
-    
-        if (ccJson.containsKey("N") && !ccJson["N"].isNull())
+
+    // if (!ccJson["N"].isNull())
+    if (true)
+    {
+      //String topic = String(MQTT_TOPIC) + "/" + String(ccJson["N"].as<String>()) + "/json";
+      String topic = String(MQTT_TOPIC) + "/acdc/json";
+      if (!mqttClient.connected())
+      {
+        Serial.println("> [MQTT] Not connected");
+        connectToMqtt();
+      }
+
+      boolean publishMqtt = true;
+      boolean published = true;
+      //boolean retained = !ccJson["R"].isNull();
+      boolean retained = false;
+
+      if (publishMqtt)
+      {
+        // Serial.println(ccJsonStr.c_str());
+        // BUG
+        published = mqttClient.publish(topic.c_str(), ccJsonStr.c_str(), retained);
+      }
+      // Check if published
+      if (published)
+      {
+        Serial.print("> [MQTT] Message published");
+        if (retained)
         {
-          String topic = String(MQTT_TOPIC) + "/" + String(ccJson["N"].as<String>()) + "/json";
-          if (!mqttClient.connected())
-          {
-            Serial.println("> [MQTT] Not connected");
-            connectToMqtt();
-          }
-
-          boolean publishMqtt = true;
-          boolean published = true;
-          boolean retained = !(ccJson.containsKey("R") && !ccJson["R"].isNull());
-
-          if (publishMqtt)
-          {
-            // Serial.println(ccJsonStr.c_str());
-            // BUG
-            published = mqttClient.publish(topic.c_str(), ccJsonStr.c_str(), retained);
-          }
-          // Check if published
-          if (published)
-          {
-            Serial.print("> [MQTT] Message published");
-            if (retained)
-            {
-              Serial.print(" retained");
-            }
-            Serial.println("");
-          }
-          else
-          {
-            Serial.println("> [MQTT] No publish message");
-          }
+          Serial.print(" retained");
         }
+        Serial.println("");
+      }
+      else
+      {
+        Serial.println("> [MQTT] No publish message");
+      }
+    }
 
-        // websocket
-    #ifdef DEBUG
-        wsDataSize = ccJson.size();
-        Serial.print("> [WS] ccJson size: ");
-        Serial.println(wsDataSize);
-    #endif
-        if (!ccJson.isNull() && ccJson.containsKey("N"))
-        {
-          myData.addPacket(ccJsonStr);
-        }
-        ccJsonStr = "";
-        notifyClients();
+    // websocket
+#ifdef DEBUG
+    wsDataSize = ccJson.size();
+    Serial.print("> [WS] ccJson size: ");
+    Serial.println(wsDataSize);
+#endif
+    if (!ccJson.isNull())
+    {
+      myData.addPacket(ccJsonStr);
+    }
+    ccJsonStr = "";
+    notifyClients();
   } // length 0
 }
 
@@ -425,8 +460,8 @@ void setup()
 
 void loop()
 {
-  // ws.cleanupClients();
-  // checkMqtt();
+  ws.cleanupClients();
+  checkMqtt();
 #ifdef MARK
   printMARK();
 #endif
